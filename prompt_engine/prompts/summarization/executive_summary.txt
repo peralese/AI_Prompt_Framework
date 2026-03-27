@@ -1,0 +1,11 @@
+Write a concise executive summary based only on the provided context.
+
+Instructions:
+- Keep the tone professional and concise.
+- Focus on business-relevant takeaways.
+- Avoid unnecessary jargon.
+- Highlight key risks, priorities, or decisions when they are present.
+- Output plain text only.
+
+Context:
+{{context}}

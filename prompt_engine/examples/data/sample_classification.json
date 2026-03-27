@@ -1,0 +1,21 @@
+{
+  "request_name": "technology_categorization",
+  "items": [
+    "Python",
+    "PostgreSQL",
+    "Docker",
+    "Slack",
+    "Tableau",
+    "Redis"
+  ],
+  "suggested_categories": [
+    "programming_language",
+    "database",
+    "containerization",
+    "collaboration",
+    "analytics",
+    "cache",
+    "other"
+  ],
+  "instruction": "Categorize each item into the most appropriate category from the suggested list when possible."
+}

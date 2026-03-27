@@ -1,0 +1,19 @@
+Extract the key fields that can be supported by the provided context.
+
+Instructions:
+- Return valid JSON only.
+- Leave unknown values as null.
+- Do not invent missing information.
+- Use only the supplied context.
+- Prefer compact field names and consistent structure.
+
+Expected JSON shape:
+{
+  "owner": "person responsible or null",
+  "deadline": "date or null",
+  "status": "current status or null",
+  "risk": "main risk or null"
+}
+
+Context:
+{{context}}

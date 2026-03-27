@@ -1,0 +1,33 @@
+{
+  "goal": "Improve customer onboarding completion this quarter",
+  "constraints": {
+    "budget": "moderate",
+    "timeline_weeks": 6,
+    "team_capacity": "limited engineering support"
+  },
+  "options": [
+    {
+      "name": "Redesign onboarding UI",
+      "effort": "high",
+      "expected_impact": "high",
+      "risk": "May not be finished within the quarter"
+    },
+    {
+      "name": "Add guided email sequence",
+      "effort": "low",
+      "expected_impact": "medium",
+      "risk": "Impact depends on message quality"
+    },
+    {
+      "name": "Introduce live onboarding workshops",
+      "effort": "medium",
+      "expected_impact": "medium",
+      "risk": "Requires operational coordination"
+    }
+  ],
+  "decision_criteria": [
+    "time to impact",
+    "delivery risk",
+    "resource efficiency"
+  ]
+}

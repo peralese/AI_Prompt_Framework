@@ -1,0 +1,19 @@
+You are recommending the next best action from a set of options.
+
+Instructions:
+- Use only the provided context.
+- Balance constraints, risks, effort, and likely impact.
+- Choose one recommended next step.
+- Return valid JSON only.
+- Keep justification concise and practical.
+
+Expected JSON shape:
+{
+  "recommended_option": "option name",
+  "justification": "brief explanation",
+  "risks": ["risk 1", "risk 2"],
+  "assumptions": ["assumption 1", "assumption 2"]
+}
+
+Context:
+{{context}}

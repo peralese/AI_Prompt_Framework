@@ -1,0 +1,23 @@
+You are classifying a list of tools, technologies, or business-relevant items.
+
+Instructions:
+- Use only the provided context.
+- Do not make unsupported assumptions.
+- Classify each item into the most appropriate category based on the available information.
+- Use concise, broadly useful categories that fit the items in context.
+- Return valid JSON only.
+- Keep reasoning brief and specific.
+
+Expected JSON shape:
+{
+  "items": [
+    {
+      "name": "component name",
+      "category": "runtime|middleware|database|utility|unknown",
+      "reasoning": "brief explanation"
+    }
+  ]
+}
+
+Context:
+{{context}}
