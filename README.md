@@ -152,6 +152,7 @@ The reporting layer is still generic:
 
 - reports are generated from existing experiment results, validation status, and rubric scores
 - reports are written as markdown files under `experiment_reports/`
+- readable comparison reports are also written as markdown under `experiment_reports/`
 - findings are grouped by template rather than by domain-specific concepts
 - reports summarize completion rate, validation behavior, rubric performance, and concerns
 - the runner highlights the current best template when the available metrics support a comparison
@@ -161,6 +162,7 @@ Completed deliverables in this phase:
 - reusable report models and a markdown report generator
 - automatic report generation during experiment runs
 - human-readable experiment summaries saved under `experiment_reports/`
+- readable side-by-side comparison reports saved under `experiment_reports/`
 - pytest coverage for report generation and saved report output
 
 ## Example Prompt Categories
@@ -329,6 +331,7 @@ The experiment example uses [examples/data/sample_experiment_config.json](/home/
 4. Review console output for the high-level summary.
 5. Review `experiment_logs/<experiment_name>.jsonl` for per-template results.
 6. Review `experiment_reports/<experiment_name>.md` for the human-readable findings summary.
+7. Review `experiment_reports/<experiment_name>_readable.md` for the case-by-case output comparison.
 
 Each experiment record captures:
 
@@ -353,11 +356,20 @@ The markdown report captures:
 - per-template findings
 - notable execution, validation, or scoring issues
 
+The readable comparison report captures:
+
+- one section per case
+- the case input payload
+- each template output side by side under the same case
+- validation status and rubric score when available
+- case notes when available
+
 ## Evaluation And Experiment Logs
 
 - `evaluation_logs/` stores general prompt run records from the example scripts
 - `experiment_logs/` stores one JSONL file per experiment, with one record per template run
 - `experiment_reports/` stores one markdown summary per experiment
+- `experiment_reports/` also stores one readable comparison markdown file per experiment with the `_readable.md` suffix
 
 ## Running Tests
 
@@ -401,5 +413,11 @@ To review findings without reading raw logs:
 1. Run an experiment normally
 2. Open the matching markdown file in `experiment_reports/`
 3. Compare template-level findings, notable issues, and the current best template
+
+To review raw outputs side by side:
+
+1. Run an experiment normally
+2. Open `experiment_reports/<experiment_name>_readable.md`
+3. Compare the outputs for each template under each case heading
 
 This keeps the framework general-purpose while making prompt experimentation explicit and repeatable.

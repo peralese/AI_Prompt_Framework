@@ -62,6 +62,8 @@ class ExperimentRunResult(BaseModel):
     dataset_name: str | None = None
     case_id: str | None = None
     case_description: str | None = None
+    input_payload: dict[str, Any] | None = None
+    notes: str | None = None
     raw_output: str | None = None
     validation_status: str
     validation_error: str | None = None
@@ -138,3 +140,4 @@ class ExperimentReport(BaseModel):
     findings: list[TemplateFinding] = Field(default_factory=list)
     notable_issues: list[str] = Field(default_factory=list)
     markdown: str
+    readable_markdown: str = ""

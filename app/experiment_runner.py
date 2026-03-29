@@ -82,6 +82,7 @@ class ExperimentRunner:
         results: list[ExperimentRunResult] = []
         log_path: Path | None = None
         report_path: Path | None = None
+        readable_report_path: Path | None = None
         for case in cases:
             for template_identifier in config.templates:
                 category, template_name = self._split_template_identifier(
@@ -94,6 +95,8 @@ class ExperimentRunner:
                     dataset_name=dataset_name,
                     case_id=case.case_id,
                     case_description=case.description,
+                    input_payload=case.input_payload,
+                    notes=case.notes,
                     rubric_name=rubric.rubric_name if rubric else None,
                     validation_status="not_requested",
                 )
@@ -152,11 +155,13 @@ class ExperimentRunner:
 
         report = self.report_generator.generate_report(config.experiment_name, results)
         report_path = self.evaluator.save_experiment_report(report)
+        readable_report_path = self.evaluator.save_readable_experiment_report(report)
         self._print_summary(
             config.experiment_name,
             results,
             log_path,
             report_path,
+            readable_report_path,
             len(cases),
             rubric_enabled=rubric is not None,
         )
@@ -207,6 +212,7 @@ class ExperimentRunner:
         results: list[ExperimentRunResult],
         log_path: Path | None,
         report_path: Path | None,
+        readable_report_path: Path | None,
         case_count: int,
         rubric_enabled: bool,
     ) -> None:
@@ -243,6 +249,8 @@ class ExperimentRunner:
             print(f"Experiment log saved to: {log_path}")
         if report_path:
             print(f"Experiment report saved to: {report_path}")
+        if readable_report_path:
+            print(f"Readable comparison report saved to: {readable_report_path}")
 
     def _resolve_path(self, path_value: str, base_dir: Path) -> Path:
         """Resolve a config-relative or absolute path."""

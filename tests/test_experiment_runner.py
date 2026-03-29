@@ -163,6 +163,7 @@ def test_run_experiment_executes_dataset_cases(tmp_path: Path) -> None:
                         "case_id": "case_1",
                         "description": "First summary case",
                         "input_payload": {"status": "In delivery"},
+                        "notes": "Review how each template handles a positive status.",
                     },
                     {
                         "case_id": "case_2",
@@ -201,6 +202,7 @@ def test_run_experiment_executes_dataset_cases(tmp_path: Path) -> None:
     assert {result.case_id for result in results} == {"case_1", "case_2"}
     assert {result.dataset_name for result in results} == {"summary_dataset"}
     assert all(result.validation_status == "not_requested" for result in results)
+    assert any(result.notes == "Review how each template handles a positive status." for result in results)
 
 
 def test_run_experiment_scores_dataset_cases_with_rubric(tmp_path: Path) -> None:
@@ -283,7 +285,9 @@ def test_run_experiment_writes_human_readable_report(tmp_path: Path) -> None:
                 "cases": [
                     {
                         "case_id": "case_1",
+                        "description": "Summarize the delivery update.",
                         "input_payload": {"project_name": "Customer Insights Dashboard"},
+                        "notes": "Use this case to compare wording and clarity.",
                     }
                 ],
             }
@@ -314,10 +318,17 @@ def test_run_experiment_writes_human_readable_report(tmp_path: Path) -> None:
     )
 
     saved_report = report_dir / "summary_report_comparison.md"
+    saved_readable_report = report_dir / "summary_report_comparison_readable.md"
     assert saved_report.exists()
+    assert saved_readable_report.exists()
     report_text = saved_report.read_text(encoding="utf-8")
+    readable_text = saved_readable_report.read_text(encoding="utf-8")
     assert "# Experiment Report: summary_report_comparison" in report_text
     assert "Current best template" in report_text
+    assert "# Readable Experiment Comparison: summary_report_comparison" in readable_text
+    assert "### Input" in readable_text
+    assert "### Template: summarization/executive_summary" in readable_text
+    assert "Use this case to compare wording and clarity." in readable_text
 
 
 def test_run_experiment_records_successful_json_validation(tmp_path: Path) -> None:

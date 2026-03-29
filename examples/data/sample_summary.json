@@ -2,21 +2,25 @@
   "meeting_title": "Application Discovery Discussion",
   "application_name": "Huntsville Website",
   "notes": [
-  "There are discussions going on about whether this application is still needed or not"
-  "Upper limit for users is 5000.  This is the number of users for the entire Huntsville site.   The actual number of users is less."
-  "Data classification:"
-  "EAR – No License required (NLR)"
-  "<Client> Proprietary"
-  "<Client> Information"
-  "No impact on this application if upstream (BEDW) is not migrated"
-  "Web servers are part of Enterprise Web hosting platform"
-  "There are no in-flight projects"
-  "Stars of Alabama” is the main project that still uses this site.   There is on-going discussion to determine if they will continue this program.      No decision has yet been made. Mike will be the Point of contact."
-  "EFS shares are there"
-  "\\SW\ewh\dev\vol1\hsv"
-  "\\sw\ewh\test\vol1\hsv"
-  "Application team will not need load balancing in future state"
-  "The development web server is not required in future state"
-  "Justine to provide access (Application and Infra) to:"
-  "Rohit (Id – 3796019)"
+  "There are discussions going on about whether this application is still needed or not",
+  "Upper limit for users is 5000.",
+  "This is the number of users for the entire Huntsville site.",
+  "The actual number of users is less.",
+  "Data classification:",
+  "EAR – No License required (NLR)",
+  "<Client> Proprietary",
+  "<Client> Information",
+  "No impact on this application if upstream (BEDW) is not migrated",
+  "Web servers are part of Enterprise Web hosting platform",
+  "There are no in-flight projects",
+  "Stars of Alabama” is the main project that still uses this site.   There is on-going discussion to determine if they will continue this program.      No decision has yet been made. Mike will be the Point of contact.",
+  "EFS shares are there",
+  "\\\\SW\\ewh\\dev\\vol1\\hsv",
+  "\\\\sw\\ewh\\test\\vol1\\hsv",
+  "Application team will not need load balancing in future state",
+  "The development web server is not required in future state",
+  "Justine to provide access (Application and Infra) to:",
+  "Rohit (Id – 3796019)",
   "Erick (Id – 3797779)"
+  ]
+}

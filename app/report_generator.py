@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+import json
 
 from .models import ExperimentReport, ExperimentRunResult, TemplateFinding
 
@@ -50,8 +51,10 @@ class ExperimentReportGenerator:
             findings=findings,
             notable_issues=notable_issues,
             markdown="",
+            readable_markdown="",
         )
         report.markdown = self._render_markdown(report)
+        report.readable_markdown = self._render_readable_markdown(report, results)
         return report
 
     def _summarize_template(
@@ -192,3 +195,72 @@ class ExperimentReportGenerator:
             lines.append(f"- {issue}")
 
         return "\n".join(lines)
+
+    def _render_readable_markdown(
+        self, report: ExperimentReport, results: list[ExperimentRunResult]
+    ) -> str:
+        """Render a readable side-by-side comparison report grouped by case."""
+
+        case_groups: dict[str, list[ExperimentRunResult]] = defaultdict(list)
+        case_order: list[str] = []
+        for result in results:
+            case_key = result.case_id or "input_1"
+            if case_key not in case_groups:
+                case_order.append(case_key)
+            case_groups[case_key].append(result)
+
+        lines = [
+            f"# Readable Experiment Comparison: {report.experiment_name}",
+            "",
+        ]
+        if report.dataset_name:
+            lines.append(f"- Dataset: {report.dataset_name}")
+        if report.rubric_name:
+            lines.append(f"- Rubric: {report.rubric_name}")
+        lines.extend(
+            [
+                f"- Cases covered: {report.total_cases}",
+                f"- Templates compared: {report.total_templates}",
+                "",
+            ]
+        )
+
+        for index, case_key in enumerate(case_order, start=1):
+            case_results = sorted(
+                case_groups[case_key], key=lambda result: result.template_name
+            )
+            case_sample = case_results[0]
+            lines.append(f"## Case {index}: {case_key}")
+            if case_sample.case_description:
+                lines.append(case_sample.case_description)
+                lines.append("")
+            lines.append("### Input")
+            input_payload = case_sample.input_payload or {}
+            lines.append("```json")
+            lines.append(json.dumps(input_payload, indent=2, sort_keys=True))
+            lines.append("```")
+            if case_sample.notes:
+                lines.append("")
+                lines.append(f"Notes: {case_sample.notes}")
+            lines.append("")
+
+            for result in case_results:
+                lines.append(f"### Template: {result.template_name}")
+                lines.append(f"- Validation status: {result.validation_status}")
+                if result.validation_error:
+                    lines.append(f"- Validation error: {result.validation_error}")
+                if result.rubric_score is not None and result.rubric_max_score is not None:
+                    lines.append(
+                        f"- Rubric score: {result.rubric_score}/{result.rubric_max_score}"
+                    )
+                elif result.scoring_status != "not_requested":
+                    lines.append(f"- Scoring status: {result.scoring_status}")
+                if result.notes:
+                    lines.append(f"- Notes: {result.notes}")
+                lines.append("- Output:")
+                lines.append("```text")
+                lines.append((result.raw_output or "").strip())
+                lines.append("```")
+                lines.append("")
+
+        return "\n".join(lines).strip()

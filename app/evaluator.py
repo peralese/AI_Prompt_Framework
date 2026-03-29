@@ -67,3 +67,11 @@ class Evaluator:
         output_path = self.report_dir / f"{safe_name}.md"
         output_path.write_text(report.markdown, encoding="utf-8")
         return output_path
+
+    def save_readable_experiment_report(self, report: ExperimentReport) -> Path:
+        """Write a readable side-by-side comparison report to disk."""
+
+        safe_name = report.experiment_name.replace(" ", "_")
+        output_path = self.report_dir / f"{safe_name}_readable.md"
+        output_path.write_text(report.readable_markdown, encoding="utf-8")
+        return output_path
