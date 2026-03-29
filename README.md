@@ -61,7 +61,7 @@ Phase 1 established the reusable prompt engine foundation:
 
 ## Phase 2 Roadmap
 
-- Phase 2A: Generic prompt experiment harness for comparing prompt versions against the same structured input
+- Phase 2A: Completed. Generic prompt experiment harness for comparing prompt versions against the same structured input
 - Phase 2B: Reusable evaluation datasets across prompt categories
 - Phase 2C: Evaluation rubric and scoring model
 - Phase 2D: Human-readable experiment summaries and findings
@@ -73,7 +73,7 @@ Phase 1 established the reusable prompt engine foundation:
 
 ## Phase 2A: Prompt Experiment Harness
 
-Phase 2A adds a generic comparison harness that runs multiple templates against the same input payload. This makes it easier to test prompt variations, compare prompt designs, and document what works without tying the framework to a single task type.
+Phase 2A is complete. It adds a generic comparison harness that runs multiple templates against the same input payload. This makes it easier to test prompt variations, compare prompt designs, and document what works without tying the framework to a single task type.
 
 The experiment harness is category-neutral:
 
@@ -85,6 +85,15 @@ The experiment harness is category-neutral:
 - it continues through validation failures so one bad prompt variant does not stop the experiment
 
 This supports Week 9 style goals around testing variations, comparing prompt designs, and keeping a written record of findings.
+
+Completed deliverables in this phase:
+
+- `ExperimentRunner` for loading configs and running template comparisons
+- reusable experiment config and result models
+- JSONL experiment logging under `experiment_logs/`
+- optional generic JSON validation with non-fatal failures
+- an example experiment config and runner script
+- test coverage for config loading, multi-template execution, and validation behavior
 
 ## Example Prompt Categories
 
