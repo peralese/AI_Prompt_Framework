@@ -2,15 +2,19 @@
 
 AI Prompt Framework is a reusable, plain-Python prompt engineering toolkit for local AI development. The project is intentionally general-purpose: it is designed to support many prompt-driven tasks without becoming primarily about one project, workflow, or domain.
 
-The framework keeps the architecture explicit and lightweight:
+The framework now supports both prompt experimentation and live prompt testing:
 
 - prompt templates live on disk
 - structured input is converted into deterministic prompt context
 - the prompt engine handles template injection and model calls
 - validators handle JSON parsing and required-key checks
-- evaluation and experiment logs capture what was run and what happened
+- datasets and rubrics support repeatable comparisons
+- experiment logs and reports capture what was run and what happened
+- a root-level CLI supports real input files from the project root
 
-Examples are demonstrations, not the definition of the framework. The included prompt categories show how the toolkit can be used for classification, summarization, extraction, and decisioning, but the core code should remain reusable across prompt categories. Experimentation should stay category-neutral where possible.
+Examples are demonstrations, not the definition of the framework. The included prompt categories show how the toolkit can be used for classification, summarization, extraction, and decisioning, but the core code remains reusable across prompt categories.
+
+The framework is evolving from a prompt lab into a usable prompt testing tool. Experimentation remains important, but the primary interface for live use is now the root-level CLI.
 
 ## Current Architecture
 
@@ -19,6 +23,7 @@ app/
   __init__.py
   config.py
   context_builder.py
+  dataset_loader.py
   evaluator.py
   experiment_runner.py
   llm_client.py
@@ -30,155 +35,124 @@ app/
   scorer.py
   template_loader.py
   validators.py
+configs/
+data/
+  live/
+  test/
+datasets/
+examples/
+  data/
 prompts/
   classification/
   decisioning/
   extraction/
   summarization/
-datasets/
 rubrics/
-examples/
-  data/
-  run_classification_example.py
-  run_decision_example.py
-  run_experiment_example.py
-  run_extraction_example.py
-  run_summary_example.py
 evaluation_logs/
 experiment_logs/
 experiment_reports/
+run_experiment.py
 tests/
 README.md
 requirements.txt
 ```
 
-## Phase 1 Capabilities
+## Operational Usage
 
-Phase 1 established the reusable prompt engine foundation:
+The primary way to run the tool is from the project root:
 
-- template loading by category and name
-- deterministic context building from dictionaries and lists
-- OpenAI integration through an isolated provider wrapper
-- JSON output validation and required-key checks
-- centralized console logging
-- JSONL-based evaluation logging
-- runnable examples across multiple prompt categories
-- pytest coverage for core utility modules
+```bash
+python3 run_experiment.py --config configs/live_summary_test.json
+```
 
-## Phase 2 Roadmap
+This supports real input files without relying on `examples/run_experiment_example.py`.
 
-- Phase 2A: Completed. Generic prompt experiment harness for comparing prompt versions against the same structured input
+Supported usage patterns:
+
+Config-driven run:
+
+```bash
+python3 run_experiment.py --config configs/live_summary_test.json
+```
+
+Direct one-off run with a single input file:
+
+```bash
+python3 run_experiment.py \
+  --templates summarization/executive_summary summarization/executive_summary_v2 \
+  --input-file data/live/sample_summary_live.json \
+  --experiment-name live_summary_test
+```
+
+Direct dataset run:
+
+```bash
+python3 run_experiment.py \
+  --templates summarization/executive_summary summarization/executive_summary_v2 \
+  --dataset-file data/test/summary_dataset.json \
+  --experiment-name summary_dataset_comparison
+```
+
+Optional CLI flags:
+
+- `--rubric-file rubrics/summary_quality_rubric.json`
+- `--expects-json`
+- `--required-keys key1 key2`
+- `--show-output`
+
+When `--show-output` is enabled, the CLI prints the readable case-by-case comparison output directly to the terminal.
+
+## Live Testing And Experimentation
+
+Operational / live testing mode:
+
+- `run_experiment.py` is the primary entry point
+- `configs/` can store reusable run configs
+- `data/live/` is for real user-supplied input files
+- `data/test/` is for local test inputs
+- output artifacts are written to `experiment_logs/` and `experiment_reports/`
+
+Experimentation / development mode:
+
+- `examples/` contains optional demos
+- `datasets/` contains reusable evaluation datasets
+- `rubrics/` contains reusable scoring rubrics
+- this mode is useful for template iteration, prompt tuning, and regression-style comparisons
+
+## Phase Roadmap
+
+- Phase 1: Completed. Core prompt engine, templates, context builder, validation, and evaluation logging
+- Phase 2A: Completed. Generic prompt experiment harness for comparing prompt versions
 - Phase 2B: Completed. Reusable evaluation datasets across prompt categories
 - Phase 2C: Completed. Evaluation rubric and scoring model
-- Phase 2D: Completed. Human-readable experiment summaries and findings
+- Phase 2D: Completed. Human-readable experiment summaries and readable comparison reports
 - Later ideas:
   - multiple LLM providers behind a shared interface
   - richer schema validation and typed extraction flows
   - prompt versioning strategy and naming conventions
   - multi-step prompt pipelines
 
-## Phase 2A: Prompt Experiment Harness
-
-Phase 2A is complete. It adds a generic comparison harness that runs multiple templates against the same input payload. This makes it easier to test prompt variations, compare prompt designs, and document what works without tying the framework to a single task type.
-
-The experiment harness is category-neutral:
-
-- it loads a simple JSON config
-- it reads one structured input file
-- it runs each template listed in the config against that same input
-- it optionally validates JSON output and required keys
-- it records one JSONL result per template run under `experiment_logs/`
-- it continues through validation failures so one bad prompt variant does not stop the experiment
-
-This supports Week 9 style goals around testing variations, comparing prompt designs, and keeping a written record of findings.
-
-Completed deliverables in this phase:
-
-- `ExperimentRunner` for loading configs and running template comparisons
-- reusable experiment config and result models
-- JSONL experiment logging under `experiment_logs/`
-- optional generic JSON validation with non-fatal failures
-- an example experiment config and runner script
-- test coverage for config loading, multi-template execution, and validation behavior
-
-## Phase 2B: Reusable Evaluation Datasets
-
-Phase 2B is complete. It extends the experiment harness so experiments can run reusable multi-case datasets instead of only a single input file. This keeps experimentation generic while making it easier to compare prompt variants across a broader set of structured inputs.
-
-The dataset layer is still category-neutral:
-
-- datasets are plain JSON files under `datasets/`
-- each dataset has a `dataset_name` and a list of reusable `cases`
-- each case has a `case_id` plus an `input_payload`
-- experiments can now point to either `input_file` or `dataset_file`
-- the experiment runner executes every template against every dataset case
-- experiment logs now capture dataset and case identifiers for later scoring and reporting
-
-Completed deliverables in this phase:
-
-- reusable dataset models and a dataset loader
-- support for `dataset_file` in experiment configs
-- multi-case experiment execution across templates
-- a generic summarization evaluation dataset
-- pytest coverage for dataset loading and dataset-based experiment runs
-
-## Phase 2C: Evaluation Rubric And Scoring Model
-
-Phase 2C is complete. It adds a reusable rubric layer so experiments can score outputs using explicit, file-based criteria instead of relying only on validation or manual inspection.
-
-The scoring layer is still generic:
-
-- rubrics are plain JSON files under `rubrics/`
-- each rubric has a `rubric_name` and a list of weighted criteria
-- criteria use explicit rule types so scoring remains deterministic and inspectable
-- experiment configs can now point to an optional `rubric_file`
-- scored experiment runs write rubric name, total score, max score, and per-criterion breakdown into the experiment log
-- scoring remains optional, so experiments can still run without a rubric
-
-Completed deliverables in this phase:
-
-- reusable rubric models and a rubric loader
-- a deterministic scorer with generic rule types
-- support for `rubric_file` in experiment configs
-- per-run score breakdowns in `experiment_logs/`
-- a generic summarization rubric example
-- pytest coverage for rubric loading and scoring behavior
-
-## Phase 2D: Human-Readable Experiment Summaries And Findings
-
-Phase 2D is complete. It adds a reporting layer that turns experiment results into readable summaries, highlights the current best-performing template, and surfaces notable issues without requiring the user to inspect raw JSONL logs by hand.
-
-The reporting layer is still generic:
-
-- reports are generated from existing experiment results, validation status, and rubric scores
-- reports are written as markdown files under `experiment_reports/`
-- readable comparison reports are also written as markdown under `experiment_reports/`
-- findings are grouped by template rather than by domain-specific concepts
-- reports summarize completion rate, validation behavior, rubric performance, and concerns
-- the runner highlights the current best template when the available metrics support a comparison
-
-Completed deliverables in this phase:
-
-- reusable report models and a markdown report generator
-- automatic report generation during experiment runs
-- human-readable experiment summaries saved under `experiment_reports/`
-- readable side-by-side comparison reports saved under `experiment_reports/`
-- pytest coverage for report generation and saved report output
-
-## Example Prompt Categories
-
-The included examples demonstrate common prompt patterns:
-
-- `classification`: categorize a list of tools, technologies, or other items into structured labels
-- `summarization`: convert structured notes into concise executive-facing summaries
-- `extraction`: pull structured fields from messy source text while leaving unknown values as `null`
-- `decisioning`: recommend a next step from options, constraints, and tradeoffs
-
-These are examples, not limits. You can add your own templates under `prompts/` and create new flows without changing the core engine.
-
 ## Experiment Config Format
 
-Experiments use a small JSON config file:
+Experiments use a small generic JSON config file.
+
+Single-file mode:
+
+```json
+{
+  "experiment_name": "live_summary_test",
+  "templates": [
+    "summarization/executive_summary",
+    "summarization/executive_summary_v2"
+  ],
+  "input_file": "data/live/sample_summary_live.json",
+  "rubric_file": "rubrics/summary_quality_rubric.json",
+  "expects_json": false,
+  "required_keys": []
+}
+```
+
+Dataset mode:
 
 ```json
 {
@@ -187,8 +161,8 @@ Experiments use a small JSON config file:
     "summarization/executive_summary",
     "summarization/executive_summary_v2"
   ],
-  "dataset_file": "../../datasets/summary_evaluation_dataset.json",
-  "rubric_file": "../../rubrics/summary_quality_rubric.json",
+  "dataset_file": "data/test/summary_dataset.json",
+  "rubric_file": "rubrics/summary_quality_rubric.json",
   "expects_json": false,
   "required_keys": []
 }
@@ -198,13 +172,13 @@ Fields:
 
 - `experiment_name`: required
 - `templates`: required list of `category/template_name` identifiers
-- `input_file`: required path to a structured JSON payload
+- `input_file`: optional path to a single structured JSON input file
 - `dataset_file`: optional path to a reusable dataset JSON file
 - `rubric_file`: optional path to a reusable rubric JSON file
 - `expects_json`: optional boolean for JSON validation
 - `required_keys`: optional list of keys that must exist when JSON validation is enabled
 
-An experiment should provide either `input_file` for a single-case run or `dataset_file` for a reusable multi-case run. A rubric is optional and can be layered onto either style.
+An experiment should provide either `input_file` or `dataset_file`. A rubric is optional and can be layered onto either mode.
 
 ## Dataset Format
 
@@ -235,6 +209,7 @@ Fields:
 - `case_id`: required per case
 - `input_payload`: required per case
 - `description`: optional per case
+- `notes`: optional per case
 
 ## Rubric Format
 
@@ -275,12 +250,64 @@ Current generic rule types:
 - `contains_all_strings`
 - `json_keys_present`
 
-File naming is enough for prompt version comparison in this phase. For example:
+## Console Output And Saved Artifacts
 
-- `summarization/executive_summary`
-- `summarization/executive_summary_v2`
-- `extraction/structured_extraction`
-- `extraction/structured_extraction_v2`
+When you run the root CLI, the console output shows:
+
+- experiment name
+- number of cases
+- whether the run is single-case
+- templates being compared
+- validation and scoring summary
+- where JSONL logs were written
+- where markdown reports were written
+
+Generated artifacts:
+
+- `experiment_logs/<experiment_name>.jsonl`
+- `experiment_reports/<experiment_name>.md`
+- `experiment_reports/<experiment_name>_readable.md`
+
+The readable comparison report is optimized for humans. It groups results by case and shows:
+
+- the input payload
+- each template output under the same case
+- validation status
+- rubric score when available
+- notes when available
+
+## Real-Usage Sample Config
+
+A root-level live testing config is included at [configs/live_summary_test.json](/home/peralese/Projects/AI_Prompt_Framework/configs/live_summary_test.json). It uses [data/live/sample_summary_live.json](/home/peralese/Projects/AI_Prompt_Framework/data/live/sample_summary_live.json) and can be run with:
+
+```bash
+python3 run_experiment.py --config configs/live_summary_test.json
+```
+
+## Running Examples
+
+Examples remain available as optional demos:
+
+```bash
+python3 examples/run_classification_example.py
+python3 examples/run_summary_example.py
+python3 examples/run_extraction_example.py
+python3 examples/run_decision_example.py
+python3 examples/run_experiment_example.py
+```
+
+The experiment demo uses [examples/data/sample_experiment_config.json](/home/peralese/Projects/AI_Prompt_Framework/examples/data/sample_experiment_config.json), [datasets/summary_evaluation_dataset.json](/home/peralese/Projects/AI_Prompt_Framework/datasets/summary_evaluation_dataset.json), and [rubrics/summary_quality_rubric.json](/home/peralese/Projects/AI_Prompt_Framework/rubrics/summary_quality_rubric.json).
+
+## Example Prompt Categories
+
+The included prompts and examples demonstrate common patterns:
+
+- `classification`
+- `summarization`
+- `extraction`
+- `decisioning`
+
+These are examples, not limits.
 
 ## Setup
 
@@ -297,7 +324,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-3. Create an environment file if needed and set your API key.
+3. Create an environment file and set your API key.
 
 ```bash
 cp .env.example .env
@@ -308,68 +335,6 @@ cp .env.example .env
 - `OPENAI_API_KEY`: required for OpenAI requests
 - `OPENAI_MODEL`: optional, defaults to `gpt-4.1-mini`
 - `LOG_LEVEL`: optional, defaults to `INFO`
-
-## Running Examples
-
-Run the examples from the repository root:
-
-```bash
-python3 examples/run_classification_example.py
-python3 examples/run_summary_example.py
-python3 examples/run_extraction_example.py
-python3 examples/run_decision_example.py
-python3 examples/run_experiment_example.py
-```
-
-The experiment example uses [examples/data/sample_experiment_config.json](/home/peralese/Projects/AI_Prompt_Framework/examples/data/sample_experiment_config.json), [datasets/summary_evaluation_dataset.json](/home/peralese/Projects/AI_Prompt_Framework/datasets/summary_evaluation_dataset.json), and [rubrics/summary_quality_rubric.json](/home/peralese/Projects/AI_Prompt_Framework/rubrics/summary_quality_rubric.json) to compare and score two summarization templates across a reusable multi-case dataset.
-
-## How Experiments Work
-
-1. Create or reuse one structured input JSON file or a reusable dataset file.
-2. List one or more template identifiers in an experiment config.
-3. Run the experiment example or call `ExperimentRunner` directly.
-4. Review console output for the high-level summary.
-5. Review `experiment_logs/<experiment_name>.jsonl` for per-template results.
-6. Review `experiment_reports/<experiment_name>.md` for the human-readable findings summary.
-7. Review `experiment_reports/<experiment_name>_readable.md` for the case-by-case output comparison.
-
-Each experiment record captures:
-
-- timestamp
-- experiment name
-- template name
-- input file
-- dataset name, when applicable
-- case id, when applicable
-- raw output
-- validation status
-- validation error, if any
-- rubric name, when applicable
-- rubric score and max score, when applicable
-- rubric breakdown, when applicable
-- run status and run error, if a prompt execution failed
-
-The markdown report captures:
-
-- overall experiment scope
-- current best template
-- per-template findings
-- notable execution, validation, or scoring issues
-
-The readable comparison report captures:
-
-- one section per case
-- the case input payload
-- each template output side by side under the same case
-- validation status and rubric score when available
-- case notes when available
-
-## Evaluation And Experiment Logs
-
-- `evaluation_logs/` stores general prompt run records from the example scripts
-- `experiment_logs/` stores one JSONL file per experiment, with one record per template run
-- `experiment_reports/` stores one markdown summary per experiment
-- `experiment_reports/` also stores one readable comparison markdown file per experiment with the `_readable.md` suffix
 
 ## Running Tests
 
@@ -385,39 +350,13 @@ To add a new use case:
 2. Prepare a structured input payload
 3. Build a `PromptRequest` with the template name and input data
 4. Enable JSON validation if the prompt is expected to return structured output
-5. Add an example script, experiment config, or test if you want a reusable workflow
+5. Add a config, dataset, rubric, or example if you want a reusable workflow
 
 To compare prompt variants:
 
 1. Add a second template file such as `_v2`
-2. Create an experiment config listing both variants
-3. Run the experiment harness
-4. Review the JSONL experiment log and compare outputs
+2. Create a config listing both variants
+3. Run `python3 run_experiment.py --config ...`
+4. Review the JSONL log and markdown reports
 
-To reuse evaluation inputs across experiments:
-
-1. Create a dataset file under `datasets/`
-2. Add multiple named cases with structured payloads
-3. Point an experiment config at `dataset_file`
-4. Reuse that dataset across prompt versions and categories where appropriate
-
-To score outputs with a reusable rubric:
-
-1. Create a rubric file under `rubrics/`
-2. Define weighted criteria using the supported generic rule types
-3. Point an experiment config at `rubric_file`
-4. Run the experiment and review the score breakdown in `experiment_logs/`
-
-To review findings without reading raw logs:
-
-1. Run an experiment normally
-2. Open the matching markdown file in `experiment_reports/`
-3. Compare template-level findings, notable issues, and the current best template
-
-To review raw outputs side by side:
-
-1. Run an experiment normally
-2. Open `experiment_reports/<experiment_name>_readable.md`
-3. Compare the outputs for each template under each case heading
-
-This keeps the framework general-purpose while making prompt experimentation explicit and repeatable.
+This keeps the framework general-purpose while making prompt experimentation and live testing both first-class workflows.

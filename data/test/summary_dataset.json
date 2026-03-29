@@ -1,0 +1,50 @@
+{
+  "dataset_name": "summary_test_dataset",
+  "category": "summarization",
+  "cases": [
+    {
+      "case_id": "summary_test_case_1",
+      "description": "Delivery update with risks and next actions",
+      "input_payload": {
+        "project_name": "Customer Insights Dashboard",
+        "status": "In delivery",
+        "highlights": [
+          "Core data pipeline is operational in staging",
+          "Initial dashboard screens have been approved by business stakeholders",
+          "User acceptance testing is scheduled for next week"
+        ],
+        "risks": [
+          "Two upstream data sources still have inconsistent field mapping",
+          "The analytics team has limited bandwidth for late-cycle changes"
+        ],
+        "next_actions": [
+          "Finalize source mapping rules",
+          "Complete UAT checklist",
+          "Confirm production rollout window"
+        ]
+      }
+    },
+    {
+      "case_id": "summary_test_case_2",
+      "description": "Planning update with dependencies and follow-up actions",
+      "input_payload": {
+        "project_name": "Workflow Automation Pilot",
+        "status": "Planning complete",
+        "highlights": [
+          "Stakeholders aligned on the first automation targets",
+          "Engineering confirmed the initial integration approach",
+          "Security review has been scheduled"
+        ],
+        "risks": [
+          "Source system API rate limits may affect batch processing",
+          "Operations team availability is constrained during quarter close"
+        ],
+        "next_actions": [
+          "Finalize the pilot scope",
+          "Complete the security review",
+          "Confirm implementation owners"
+        ]
+      }
+    }
+  ]
+}

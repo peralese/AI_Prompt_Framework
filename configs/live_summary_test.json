@@ -1,0 +1,11 @@
+{
+  "experiment_name": "live_summary_test",
+  "templates": [
+    "summarization/executive_summary",
+    "summarization/executive_summary_v2"
+  ],
+  "input_file": "data/live/huntsville.json",
+  "rubric_file": "rubrics/summary_quality_rubric.json",
+  "expects_json": false,
+  "required_keys": []
+}

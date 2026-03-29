@@ -8,7 +8,13 @@ from pathlib import Path
 from .dataset_loader import DatasetLoader
 from .evaluator import Evaluator
 from .logger import get_logger
-from .models import DatasetCase, ExperimentConfig, ExperimentRunResult, PromptRequest
+from .models import (
+    DatasetCase,
+    ExperimentConfig,
+    ExperimentExecution,
+    ExperimentRunResult,
+    PromptRequest,
+)
 from .prompt_engine import PromptEngine
 from .report_generator import ExperimentReportGenerator
 from .rubric_loader import RubricLoader
@@ -47,8 +53,14 @@ class ExperimentRunner:
     def run_from_config(self, config_path: str | Path) -> list[ExperimentRunResult]:
         """Load an experiment config and execute its template runs."""
 
+        execution = self.execute_from_config(config_path)
+        return execution.results
+
+    def execute_from_config(self, config_path: str | Path) -> ExperimentExecution:
+        """Load a config file and return full experiment execution details."""
+
         config, resolved_config_path = self.load_config(config_path)
-        return self.run_experiment(config, resolved_config_path.parent)
+        return self.execute_experiment(config, resolved_config_path.parent)
 
     def run_experiment(
         self,
@@ -56,6 +68,16 @@ class ExperimentRunner:
         base_dir: str | Path | None = None,
     ) -> list[ExperimentRunResult]:
         """Execute all template runs defined in an experiment config."""
+
+        execution = self.execute_experiment(config, base_dir)
+        return execution.results
+
+    def execute_experiment(
+        self,
+        config: ExperimentConfig,
+        base_dir: str | Path | None = None,
+    ) -> ExperimentExecution:
+        """Execute an experiment and return its results plus saved artifacts."""
 
         base_path = Path(base_dir).resolve() if base_dir else Path.cwd()
         dataset_name = None
@@ -156,8 +178,10 @@ class ExperimentRunner:
         report = self.report_generator.generate_report(config.experiment_name, results)
         report_path = self.evaluator.save_experiment_report(report)
         readable_report_path = self.evaluator.save_readable_experiment_report(report)
+        template_names = sorted({result.template_name for result in results})
         self._print_summary(
             config.experiment_name,
+            template_names,
             results,
             log_path,
             report_path,
@@ -165,7 +189,18 @@ class ExperimentRunner:
             len(cases),
             rubric_enabled=rubric is not None,
         )
-        return results
+        return ExperimentExecution(
+            experiment_name=config.experiment_name,
+            template_names=template_names,
+            case_count=len(cases),
+            results=results,
+            log_path=str(log_path) if log_path else None,
+            report_path=str(report_path) if report_path else None,
+            readable_report_path=(
+                str(readable_report_path) if readable_report_path else None
+            ),
+            report=report,
+        )
 
     def _validate_output(
         self,
@@ -209,6 +244,7 @@ class ExperimentRunner:
     def _print_summary(
         self,
         experiment_name: str,
+        template_names: list[str],
         results: list[ExperimentRunResult],
         log_path: Path | None,
         report_path: Path | None,
@@ -237,7 +273,9 @@ class ExperimentRunner:
 
         print(f"Experiment: {experiment_name}")
         print(f"Cases run: {case_count}")
-        print(f"Templates run: {len(results)}")
+        print(f"Single-case run: {'yes' if case_count == 1 else 'no'}")
+        print(f"Templates compared: {', '.join(template_names)}")
+        print(f"Total runs executed: {len(results)}")
         print(f"Validation passed: {passed}")
         print(f"Validation failed: {failed}")
         print(f"Run failures: {skipped}")
@@ -253,12 +291,21 @@ class ExperimentRunner:
             print(f"Readable comparison report saved to: {readable_report_path}")
 
     def _resolve_path(self, path_value: str, base_dir: Path) -> Path:
-        """Resolve a config-relative or absolute path."""
+        """Resolve an absolute, config-relative, or project-root-relative path."""
 
         path = Path(path_value)
         if path.is_absolute():
             return path
-        return (base_dir / path).resolve()
+
+        config_relative_path = (base_dir / path).resolve()
+        if config_relative_path.exists():
+            return config_relative_path
+
+        cwd_relative_path = (Path.cwd() / path).resolve()
+        if cwd_relative_path.exists():
+            return cwd_relative_path
+
+        return config_relative_path
 
     def _split_template_identifier(self, template_identifier: str) -> tuple[str, str]:
         """Split a category/template identifier into its parts."""

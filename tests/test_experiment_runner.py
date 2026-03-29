@@ -115,6 +115,71 @@ def test_load_config_reads_rubric_experiment_settings(tmp_path: Path) -> None:
     assert config.rubric_file == "rubric.json"
 
 
+def test_execute_from_config_resolves_project_root_relative_paths(tmp_path: Path) -> None:
+    project_root = tmp_path
+    configs_dir = project_root / "configs"
+    configs_dir.mkdir()
+    data_dir = project_root / "data" / "live"
+    data_dir.mkdir(parents=True)
+    rubrics_dir = project_root / "rubrics"
+    rubrics_dir.mkdir()
+
+    input_path = data_dir / "sample.json"
+    input_path.write_text(json.dumps({"status": "In delivery"}), encoding="utf-8")
+    rubric_path = rubrics_dir / "rubric.json"
+    rubric_path.write_text(
+        json.dumps(
+            {
+                "rubric_name": "summary_rubric",
+                "criteria": [
+                    {
+                        "criterion_id": "non_empty",
+                        "description": "Output must not be empty.",
+                        "rule_type": "non_empty_output",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    config_path = configs_dir / "live_run.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "experiment_name": "live_summary_test",
+                "templates": ["summarization/executive_summary"],
+                "input_file": "data/live/sample.json",
+                "rubric_file": "rubrics/rubric.json",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    current_dir = Path.cwd()
+    try:
+        import os
+
+        os.chdir(project_root)
+        runner = ExperimentRunner(
+            prompt_engine=StubPromptEngine(
+                {
+                    "summarization/executive_summary": "Summary output",
+                }
+            ),
+            evaluator=Evaluator(
+                experiment_log_dir=project_root / "logs",
+                report_dir=project_root / "reports",
+            ),
+        )
+        results = runner.execute_from_config(config_path).results
+    finally:
+        os.chdir(current_dir)
+
+    assert len(results) == 1
+    assert results[0].input_file.endswith("data/live/sample.json")
+    assert results[0].rubric_name == "summary_rubric"
+
+
 def test_run_experiment_executes_multiple_templates(tmp_path: Path) -> None:
     input_path = tmp_path / "input.json"
     input_payload = {"status": "In delivery"}

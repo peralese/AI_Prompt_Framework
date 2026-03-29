@@ -141,3 +141,16 @@ class ExperimentReport(BaseModel):
     notable_issues: list[str] = Field(default_factory=list)
     markdown: str
     readable_markdown: str = ""
+
+
+class ExperimentExecution(BaseModel):
+    """Artifacts and results produced by an experiment run."""
+
+    experiment_name: str
+    template_names: list[str]
+    case_count: int
+    results: list[ExperimentRunResult]
+    log_path: str | None = None
+    report_path: str | None = None
+    readable_report_path: str | None = None
+    report: ExperimentReport | None = None
