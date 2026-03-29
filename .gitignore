@@ -28,12 +28,12 @@ pip-wheel-metadata/
 .env
 .env.*
 !.env.example
-prompt_engine/.env
-prompt_engine/.env.*
-!prompt_engine/.env.example
 
 # Runtime output
-prompt_engine/evaluation_logs/
+evaluation_logs/
+experiment_logs/*.jsonl
+!experiment_logs/.gitkeep
+experiment_reports/*.md
 
 # IDE and OS files
 .DS_Store

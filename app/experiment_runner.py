@@ -10,6 +10,9 @@ from .evaluator import Evaluator
 from .logger import get_logger
 from .models import DatasetCase, ExperimentConfig, ExperimentRunResult, PromptRequest
 from .prompt_engine import PromptEngine
+from .report_generator import ExperimentReportGenerator
+from .rubric_loader import RubricLoader
+from .scorer import ExperimentScorer, ScoringError
 from .validators import ValidationError, validate_json_output, validate_required_keys
 
 
@@ -21,10 +24,16 @@ class ExperimentRunner:
         prompt_engine: PromptEngine | None = None,
         evaluator: Evaluator | None = None,
         dataset_loader: DatasetLoader | None = None,
+        rubric_loader: RubricLoader | None = None,
+        scorer: ExperimentScorer | None = None,
+        report_generator: ExperimentReportGenerator | None = None,
     ) -> None:
         self.prompt_engine = prompt_engine or PromptEngine()
         self.evaluator = evaluator or Evaluator()
         self.dataset_loader = dataset_loader or DatasetLoader()
+        self.rubric_loader = rubric_loader or RubricLoader()
+        self.scorer = scorer or ExperimentScorer()
+        self.report_generator = report_generator or ExperimentReportGenerator()
         self.logger = get_logger(self.__class__.__name__)
 
     def load_config(self, config_path: str | Path) -> tuple[ExperimentConfig, Path]:
@@ -50,6 +59,10 @@ class ExperimentRunner:
 
         base_path = Path(base_dir).resolve() if base_dir else Path.cwd()
         dataset_name = None
+        rubric = None
+        if config.rubric_file:
+            rubric_path = self._resolve_path(config.rubric_file, base_path)
+            rubric, _ = self.rubric_loader.load(rubric_path)
         if config.dataset_file:
             dataset_path = self._resolve_path(config.dataset_file, base_path)
             dataset, resolved_dataset_path = self.dataset_loader.load(dataset_path)
@@ -68,6 +81,7 @@ class ExperimentRunner:
 
         results: list[ExperimentRunResult] = []
         log_path: Path | None = None
+        report_path: Path | None = None
         for case in cases:
             for template_identifier in config.templates:
                 category, template_name = self._split_template_identifier(
@@ -80,6 +94,7 @@ class ExperimentRunner:
                     dataset_name=dataset_name,
                     case_id=case.case_id,
                     case_description=case.description,
+                    rubric_name=rubric.rubric_name if rubric else None,
                     validation_status="not_requested",
                 )
 
@@ -103,6 +118,18 @@ class ExperimentRunner:
                         expects_json=config.expects_json,
                         required_keys=config.required_keys,
                     )
+                    if rubric:
+                        (
+                            run_result.scoring_status,
+                            run_result.scoring_error,
+                            run_result.rubric_score,
+                            run_result.rubric_max_score,
+                            run_result.rubric_breakdown,
+                        ) = self._score_output(
+                            run_result=run_result,
+                            input_payload=case.input_payload,
+                            rubric=rubric,
+                        )
                 except Exception as exc:  # pragma: no cover - defensive catch
                     self.logger.exception(
                         "Experiment run failed for template '%s'.", template_identifier
@@ -114,11 +141,25 @@ class ExperimentRunner:
                         run_result.validation_error = (
                             "Validation skipped because prompt execution failed."
                         )
+                    if rubric:
+                        run_result.scoring_status = "skipped"
+                        run_result.scoring_error = (
+                            "Scoring skipped because prompt execution failed."
+                        )
 
                 log_path = self.evaluator.save_experiment_result(run_result)
                 results.append(run_result)
 
-        self._print_summary(config.experiment_name, results, log_path, len(cases))
+        report = self.report_generator.generate_report(config.experiment_name, results)
+        report_path = self.evaluator.save_experiment_report(report)
+        self._print_summary(
+            config.experiment_name,
+            results,
+            log_path,
+            report_path,
+            len(cases),
+            rubric_enabled=rubric is not None,
+        )
         return results
 
     def _validate_output(
@@ -141,18 +182,52 @@ class ExperimentRunner:
 
         return "passed", None
 
+    def _score_output(
+        self,
+        run_result: ExperimentRunResult,
+        input_payload: dict,
+        rubric,
+    ) -> tuple[str, str | None, float | None, float | None, list[dict]]:
+        """Score a prompt output according to the selected rubric."""
+
+        try:
+            score, max_score, breakdown = self.scorer.score_run(
+                run_result=run_result,
+                input_payload=input_payload,
+                rubric=rubric,
+            )
+        except ScoringError as exc:
+            return "failed", str(exc), None, None, []
+
+        return "scored", None, score, max_score, breakdown
+
     def _print_summary(
         self,
         experiment_name: str,
         results: list[ExperimentRunResult],
         log_path: Path | None,
+        report_path: Path | None,
         case_count: int,
+        rubric_enabled: bool,
     ) -> None:
         """Print a concise console summary for an experiment run."""
 
         passed = sum(result.validation_status == "passed" for result in results)
         failed = sum(result.validation_status == "failed" for result in results)
         skipped = sum(result.run_status == "failed" for result in results)
+        scored = sum(result.scoring_status == "scored" for result in results)
+        average_score = None
+        score_values = [
+            (result.rubric_score or 0.0, result.rubric_max_score or 0.0)
+            for result in results
+            if result.scoring_status == "scored"
+            and result.rubric_score is not None
+            and result.rubric_max_score
+        ]
+        if score_values:
+            average_score = sum(score / max_score for score, max_score in score_values) / len(
+                score_values
+            )
 
         print(f"Experiment: {experiment_name}")
         print(f"Cases run: {case_count}")
@@ -160,8 +235,14 @@ class ExperimentRunner:
         print(f"Validation passed: {passed}")
         print(f"Validation failed: {failed}")
         print(f"Run failures: {skipped}")
+        if rubric_enabled:
+            print(f"Scored runs: {scored}")
+            if average_score is not None:
+                print(f"Average rubric score: {average_score:.2%}")
         if log_path:
             print(f"Experiment log saved to: {log_path}")
+        if report_path:
+            print(f"Experiment report saved to: {report_path}")
 
     def _resolve_path(self, path_value: str, base_dir: Path) -> Path:
         """Resolve a config-relative or absolute path."""

@@ -89,6 +89,32 @@ def test_load_config_reads_dataset_experiment_settings(tmp_path: Path) -> None:
     assert resolved_path == config_path.resolve()
 
 
+def test_load_config_reads_rubric_experiment_settings(tmp_path: Path) -> None:
+    config_path = tmp_path / "experiment.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "experiment_name": "summary_scored_comparison",
+                "templates": ["summarization/executive_summary"],
+                "dataset_file": "dataset.json",
+                "rubric_file": "rubric.json",
+                "expects_json": False,
+                "required_keys": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    runner = ExperimentRunner(
+        prompt_engine=StubPromptEngine({}),
+        evaluator=Evaluator(experiment_log_dir=tmp_path / "logs"),
+    )
+
+    config, _ = runner.load_config(config_path)
+
+    assert config.rubric_file == "rubric.json"
+
+
 def test_run_experiment_executes_multiple_templates(tmp_path: Path) -> None:
     input_path = tmp_path / "input.json"
     input_payload = {"status": "In delivery"}
@@ -175,6 +201,123 @@ def test_run_experiment_executes_dataset_cases(tmp_path: Path) -> None:
     assert {result.case_id for result in results} == {"case_1", "case_2"}
     assert {result.dataset_name for result in results} == {"summary_dataset"}
     assert all(result.validation_status == "not_requested" for result in results)
+
+
+def test_run_experiment_scores_dataset_cases_with_rubric(tmp_path: Path) -> None:
+    dataset_path = tmp_path / "dataset.json"
+    dataset_path.write_text(
+        json.dumps(
+            {
+                "dataset_name": "summary_dataset",
+                "cases": [
+                    {
+                        "case_id": "case_1",
+                        "input_payload": {
+                            "project_name": "Customer Insights Dashboard",
+                            "status": "In delivery",
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    rubric_path = tmp_path / "rubric.json"
+    rubric_path.write_text(
+        json.dumps(
+            {
+                "rubric_name": "summary_rubric",
+                "criteria": [
+                    {
+                        "criterion_id": "non_empty",
+                        "description": "Output must not be empty.",
+                        "rule_type": "non_empty_output",
+                        "weight": 1.0,
+                    },
+                    {
+                        "criterion_id": "context",
+                        "description": "Output should mention project context.",
+                        "rule_type": "contains_any_input_values",
+                        "weight": 1.0,
+                        "config": {"input_keys": ["project_name", "status"]},
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    runner = ExperimentRunner(
+        prompt_engine=StubPromptEngine(
+            {
+                "summarization/executive_summary": "Customer Insights Dashboard is in delivery.",
+            }
+        ),
+        evaluator=Evaluator(experiment_log_dir=tmp_path / "logs"),
+    )
+
+    results = runner.run_experiment(
+        ExperimentConfig(
+            experiment_name="summary_scored_comparison",
+            templates=["summarization/executive_summary"],
+            dataset_file=str(dataset_path),
+            rubric_file=str(rubric_path),
+        ),
+        base_dir=tmp_path,
+    )
+
+    assert len(results) == 1
+    assert results[0].scoring_status == "scored"
+    assert results[0].rubric_name == "summary_rubric"
+    assert results[0].rubric_score == 2.0
+    assert results[0].rubric_max_score == 2.0
+    assert len(results[0].rubric_breakdown) == 2
+
+
+def test_run_experiment_writes_human_readable_report(tmp_path: Path) -> None:
+    dataset_path = tmp_path / "dataset.json"
+    dataset_path.write_text(
+        json.dumps(
+            {
+                "dataset_name": "summary_dataset",
+                "cases": [
+                    {
+                        "case_id": "case_1",
+                        "input_payload": {"project_name": "Customer Insights Dashboard"},
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report_dir = tmp_path / "reports"
+    runner = ExperimentRunner(
+        prompt_engine=StubPromptEngine(
+            {
+                "summarization/executive_summary": "Customer Insights Dashboard summary.",
+            }
+        ),
+        evaluator=Evaluator(
+            experiment_log_dir=tmp_path / "logs",
+            report_dir=report_dir,
+        ),
+    )
+
+    runner.run_experiment(
+        ExperimentConfig(
+            experiment_name="summary_report_comparison",
+            templates=["summarization/executive_summary"],
+            dataset_file=str(dataset_path),
+        ),
+        base_dir=tmp_path,
+    )
+
+    saved_report = report_dir / "summary_report_comparison.md"
+    assert saved_report.exists()
+    report_text = saved_report.read_text(encoding="utf-8")
+    assert "# Experiment Report: summary_report_comparison" in report_text
+    assert "Current best template" in report_text
 
 
 def test_run_experiment_records_successful_json_validation(tmp_path: Path) -> None:

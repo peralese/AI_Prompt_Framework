@@ -1,0 +1,40 @@
+{
+  "rubric_name": "summary_quality_rubric",
+  "category": "summarization",
+  "criteria": [
+    {
+      "criterion_id": "non_empty_output",
+      "description": "The output should not be empty.",
+      "rule_type": "non_empty_output",
+      "weight": 1.0
+    },
+    {
+      "criterion_id": "mentions_project_context",
+      "description": "The summary should reference at least one core input value.",
+      "rule_type": "contains_any_input_values",
+      "weight": 2.0,
+      "config": {
+        "input_keys": ["project_name", "status"]
+      }
+    },
+    {
+      "criterion_id": "mentions_risks",
+      "description": "The summary should mention risk-related language.",
+      "rule_type": "contains_all_strings",
+      "weight": 1.0,
+      "config": {
+        "strings": ["risk"]
+      }
+    },
+    {
+      "criterion_id": "reasonable_length",
+      "description": "The summary should stay within a concise length range.",
+      "rule_type": "output_length_between",
+      "weight": 1.0,
+      "config": {
+        "min_chars": 80,
+        "max_chars": 700
+      }
+    }
+  ]
+}

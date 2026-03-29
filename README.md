@@ -25,6 +25,9 @@ app/
   logger.py
   models.py
   prompt_engine.py
+  report_generator.py
+  rubric_loader.py
+  scorer.py
   template_loader.py
   validators.py
 prompts/
@@ -33,6 +36,7 @@ prompts/
   extraction/
   summarization/
 datasets/
+rubrics/
 examples/
   data/
   run_classification_example.py
@@ -42,6 +46,7 @@ examples/
   run_summary_example.py
 evaluation_logs/
 experiment_logs/
+experiment_reports/
 tests/
 README.md
 requirements.txt
@@ -64,8 +69,8 @@ Phase 1 established the reusable prompt engine foundation:
 
 - Phase 2A: Completed. Generic prompt experiment harness for comparing prompt versions against the same structured input
 - Phase 2B: Completed. Reusable evaluation datasets across prompt categories
-- Phase 2C: Evaluation rubric and scoring model
-- Phase 2D: Human-readable experiment summaries and findings
+- Phase 2C: Completed. Evaluation rubric and scoring model
+- Phase 2D: Completed. Human-readable experiment summaries and findings
 - Later ideas:
   - multiple LLM providers behind a shared interface
   - richer schema validation and typed extraction flows
@@ -117,6 +122,47 @@ Completed deliverables in this phase:
 - a generic summarization evaluation dataset
 - pytest coverage for dataset loading and dataset-based experiment runs
 
+## Phase 2C: Evaluation Rubric And Scoring Model
+
+Phase 2C is complete. It adds a reusable rubric layer so experiments can score outputs using explicit, file-based criteria instead of relying only on validation or manual inspection.
+
+The scoring layer is still generic:
+
+- rubrics are plain JSON files under `rubrics/`
+- each rubric has a `rubric_name` and a list of weighted criteria
+- criteria use explicit rule types so scoring remains deterministic and inspectable
+- experiment configs can now point to an optional `rubric_file`
+- scored experiment runs write rubric name, total score, max score, and per-criterion breakdown into the experiment log
+- scoring remains optional, so experiments can still run without a rubric
+
+Completed deliverables in this phase:
+
+- reusable rubric models and a rubric loader
+- a deterministic scorer with generic rule types
+- support for `rubric_file` in experiment configs
+- per-run score breakdowns in `experiment_logs/`
+- a generic summarization rubric example
+- pytest coverage for rubric loading and scoring behavior
+
+## Phase 2D: Human-Readable Experiment Summaries And Findings
+
+Phase 2D is complete. It adds a reporting layer that turns experiment results into readable summaries, highlights the current best-performing template, and surfaces notable issues without requiring the user to inspect raw JSONL logs by hand.
+
+The reporting layer is still generic:
+
+- reports are generated from existing experiment results, validation status, and rubric scores
+- reports are written as markdown files under `experiment_reports/`
+- findings are grouped by template rather than by domain-specific concepts
+- reports summarize completion rate, validation behavior, rubric performance, and concerns
+- the runner highlights the current best template when the available metrics support a comparison
+
+Completed deliverables in this phase:
+
+- reusable report models and a markdown report generator
+- automatic report generation during experiment runs
+- human-readable experiment summaries saved under `experiment_reports/`
+- pytest coverage for report generation and saved report output
+
 ## Example Prompt Categories
 
 The included examples demonstrate common prompt patterns:
@@ -140,6 +186,7 @@ Experiments use a small JSON config file:
     "summarization/executive_summary_v2"
   ],
   "dataset_file": "../../datasets/summary_evaluation_dataset.json",
+  "rubric_file": "../../rubrics/summary_quality_rubric.json",
   "expects_json": false,
   "required_keys": []
 }
@@ -151,10 +198,11 @@ Fields:
 - `templates`: required list of `category/template_name` identifiers
 - `input_file`: required path to a structured JSON payload
 - `dataset_file`: optional path to a reusable dataset JSON file
+- `rubric_file`: optional path to a reusable rubric JSON file
 - `expects_json`: optional boolean for JSON validation
 - `required_keys`: optional list of keys that must exist when JSON validation is enabled
 
-An experiment should provide either `input_file` for a single-case run or `dataset_file` for a reusable multi-case run.
+An experiment should provide either `input_file` for a single-case run or `dataset_file` for a reusable multi-case run. A rubric is optional and can be layered onto either style.
 
 ## Dataset Format
 
@@ -185,6 +233,45 @@ Fields:
 - `case_id`: required per case
 - `input_payload`: required per case
 - `description`: optional per case
+
+## Rubric Format
+
+Reusable rubrics use a simple JSON structure:
+
+```json
+{
+  "rubric_name": "summary_quality_rubric",
+  "category": "summarization",
+  "criteria": [
+    {
+      "criterion_id": "non_empty_output",
+      "description": "The output should not be empty.",
+      "rule_type": "non_empty_output",
+      "weight": 1.0
+    }
+  ]
+}
+```
+
+Fields:
+
+- `rubric_name`: required
+- `category`: optional descriptive label
+- `criteria`: required list of weighted scoring criteria
+- `criterion_id`: required per criterion
+- `description`: required per criterion
+- `rule_type`: required per criterion
+- `weight`: optional per criterion, defaults to `1.0`
+- `config`: optional rule-specific settings
+
+Current generic rule types:
+
+- `non_empty_output`
+- `validation_passed`
+- `output_length_between`
+- `contains_any_input_values`
+- `contains_all_strings`
+- `json_keys_present`
 
 File naming is enough for prompt version comparison in this phase. For example:
 
@@ -232,7 +319,7 @@ python3 examples/run_decision_example.py
 python3 examples/run_experiment_example.py
 ```
 
-The experiment example uses [examples/data/sample_experiment_config.json](/home/peralese/Projects/AI_Prompt_Framework/examples/data/sample_experiment_config.json) and [datasets/summary_evaluation_dataset.json](/home/peralese/Projects/AI_Prompt_Framework/datasets/summary_evaluation_dataset.json) to compare two summarization templates across a reusable multi-case dataset.
+The experiment example uses [examples/data/sample_experiment_config.json](/home/peralese/Projects/AI_Prompt_Framework/examples/data/sample_experiment_config.json), [datasets/summary_evaluation_dataset.json](/home/peralese/Projects/AI_Prompt_Framework/datasets/summary_evaluation_dataset.json), and [rubrics/summary_quality_rubric.json](/home/peralese/Projects/AI_Prompt_Framework/rubrics/summary_quality_rubric.json) to compare and score two summarization templates across a reusable multi-case dataset.
 
 ## How Experiments Work
 
@@ -241,6 +328,7 @@ The experiment example uses [examples/data/sample_experiment_config.json](/home/
 3. Run the experiment example or call `ExperimentRunner` directly.
 4. Review console output for the high-level summary.
 5. Review `experiment_logs/<experiment_name>.jsonl` for per-template results.
+6. Review `experiment_reports/<experiment_name>.md` for the human-readable findings summary.
 
 Each experiment record captures:
 
@@ -253,12 +341,23 @@ Each experiment record captures:
 - raw output
 - validation status
 - validation error, if any
+- rubric name, when applicable
+- rubric score and max score, when applicable
+- rubric breakdown, when applicable
 - run status and run error, if a prompt execution failed
+
+The markdown report captures:
+
+- overall experiment scope
+- current best template
+- per-template findings
+- notable execution, validation, or scoring issues
 
 ## Evaluation And Experiment Logs
 
 - `evaluation_logs/` stores general prompt run records from the example scripts
 - `experiment_logs/` stores one JSONL file per experiment, with one record per template run
+- `experiment_reports/` stores one markdown summary per experiment
 
 ## Running Tests
 
@@ -289,5 +388,18 @@ To reuse evaluation inputs across experiments:
 2. Add multiple named cases with structured payloads
 3. Point an experiment config at `dataset_file`
 4. Reuse that dataset across prompt versions and categories where appropriate
+
+To score outputs with a reusable rubric:
+
+1. Create a rubric file under `rubrics/`
+2. Define weighted criteria using the supported generic rule types
+3. Point an experiment config at `rubric_file`
+4. Run the experiment and review the score breakdown in `experiment_logs/`
+
+To review findings without reading raw logs:
+
+1. Run an experiment normally
+2. Open the matching markdown file in `experiment_reports/`
+3. Compare template-level findings, notable issues, and the current best template
 
 This keeps the framework general-purpose while making prompt experimentation explicit and repeatable.

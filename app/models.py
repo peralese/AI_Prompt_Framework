@@ -47,6 +47,7 @@ class ExperimentConfig(BaseModel):
     templates: list[str]
     input_file: str | None = None
     dataset_file: str | None = None
+    rubric_file: str | None = None
     expects_json: bool = False
     required_keys: list[str] = Field(default_factory=list)
 
@@ -66,6 +67,12 @@ class ExperimentRunResult(BaseModel):
     validation_error: str | None = None
     run_status: str = "completed"
     run_error: str | None = None
+    rubric_name: str | None = None
+    scoring_status: str = "not_requested"
+    scoring_error: str | None = None
+    rubric_score: float | None = None
+    rubric_max_score: float | None = None
+    rubric_breakdown: list[dict[str, Any]] = Field(default_factory=list)
     model: str | None = None
     template_path: str | None = None
 
@@ -85,3 +92,49 @@ class EvaluationDataset(BaseModel):
     dataset_name: str
     category: str | None = None
     cases: list[DatasetCase]
+
+
+class RubricCriterion(BaseModel):
+    """Single scoring criterion in a reusable rubric."""
+
+    criterion_id: str
+    description: str
+    rule_type: str
+    weight: float = 1.0
+    config: dict[str, Any] = Field(default_factory=dict)
+
+
+class EvaluationRubric(BaseModel):
+    """Reusable rubric for scoring experiment outputs."""
+
+    rubric_name: str
+    category: str | None = None
+    criteria: list[RubricCriterion]
+
+
+class TemplateFinding(BaseModel):
+    """Human-readable summary metrics for one template in an experiment."""
+
+    template_name: str
+    run_count: int
+    completion_rate: float
+    validation_pass_rate: float | None = None
+    average_score: float | None = None
+    strengths: list[str] = Field(default_factory=list)
+    concerns: list[str] = Field(default_factory=list)
+
+
+class ExperimentReport(BaseModel):
+    """Human-readable report derived from experiment results."""
+
+    experiment_name: str
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    dataset_name: str | None = None
+    rubric_name: str | None = None
+    total_runs: int
+    total_templates: int
+    total_cases: int
+    best_template: str | None = None
+    findings: list[TemplateFinding] = Field(default_factory=list)
+    notable_issues: list[str] = Field(default_factory=list)
+    markdown: str

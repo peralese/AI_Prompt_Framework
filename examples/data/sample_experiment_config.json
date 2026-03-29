@@ -5,6 +5,7 @@
     "summarization/executive_summary_v2"
   ],
   "dataset_file": "../../datasets/summary_evaluation_dataset.json",
+  "rubric_file": "../../rubrics/summary_quality_rubric.json",
   "expects_json": false,
   "required_keys": []
 }

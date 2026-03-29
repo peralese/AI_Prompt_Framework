@@ -15,7 +15,8 @@ def main() -> None:
     config_path = example_dir / "data" / "sample_experiment_config.json"
 
     runner = ExperimentRunner()
-    runner.run_from_config(config_path)
+    results = runner.run_from_config(config_path)
+    print(f"Completed {len(results)} experiment run(s).")
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .models import EvaluationResult, ExperimentRunResult
+from .models import EvaluationResult, ExperimentReport, ExperimentRunResult
 
 
 class Evaluator:
@@ -15,6 +15,7 @@ class Evaluator:
         self,
         log_dir: str | Path | None = None,
         experiment_log_dir: str | Path | None = None,
+        report_dir: str | Path | None = None,
     ) -> None:
         base_dir = Path(__file__).resolve().parent.parent
         self.log_dir = Path(log_dir) if log_dir else base_dir / "evaluation_logs"
@@ -25,6 +26,8 @@ class Evaluator:
             else base_dir / "experiment_logs"
         )
         self.experiment_log_dir.mkdir(parents=True, exist_ok=True)
+        self.report_dir = Path(report_dir) if report_dir else base_dir / "experiment_reports"
+        self.report_dir.mkdir(parents=True, exist_ok=True)
 
     def save_result(
         self,
@@ -55,4 +58,12 @@ class Evaluator:
         output_path = self.experiment_log_dir / f"{safe_name}.jsonl"
         with output_path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(result.model_dump(mode="json")) + "\n")
+        return output_path
+
+    def save_experiment_report(self, report: ExperimentReport) -> Path:
+        """Write a human-readable experiment report to disk."""
+
+        safe_name = report.experiment_name.replace(" ", "_")
+        output_path = self.report_dir / f"{safe_name}.md"
+        output_path.write_text(report.markdown, encoding="utf-8")
         return output_path
