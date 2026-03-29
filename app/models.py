@@ -38,3 +38,29 @@ class EvaluationResult(BaseModel):
     notes: str | None = None
     score: float | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class ExperimentConfig(BaseModel):
+    """Configuration for running a prompt comparison experiment."""
+
+    experiment_name: str
+    templates: list[str]
+    input_file: str
+    expects_json: bool = False
+    required_keys: list[str] = Field(default_factory=list)
+
+
+class ExperimentRunResult(BaseModel):
+    """Single experiment run result for one template/input pair."""
+
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    experiment_name: str
+    template_name: str
+    input_file: str
+    raw_output: str | None = None
+    validation_status: str
+    validation_error: str | None = None
+    run_status: str = "completed"
+    run_error: str | None = None
+    model: str | None = None
+    template_path: str | None = None

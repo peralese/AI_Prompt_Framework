@@ -1,0 +1,13 @@
+Write a concise executive summary based only on the provided context.
+
+Instructions:
+- Keep the tone professional, direct, and decision-oriented.
+- Limit the response to two short paragraphs.
+- Start with the current project status and momentum.
+- Explicitly call out major risks, dependencies, or unresolved issues when present.
+- End with the most important next actions or near-term focus.
+- Do not invent details that are not present in the context.
+- Output plain text only.
+
+Context:
+{{context}}

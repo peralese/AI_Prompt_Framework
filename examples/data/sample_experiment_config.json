@@ -1,0 +1,10 @@
+{
+  "experiment_name": "summary_prompt_comparison",
+  "templates": [
+    "summarization/executive_summary",
+    "summarization/executive_summary_v2"
+  ],
+  "input_file": "sample_summary.json",
+  "expects_json": false,
+  "required_keys": []
+}

@@ -1,6 +1,6 @@
 import pytest
 
-from prompt_engine.app.validators import (
+from app.validators import (
     ValidationError,
     validate_json_output,
     validate_required_keys,

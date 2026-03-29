@@ -1,6 +1,6 @@
-from prompt_engine.app.models import PromptRequest
-from prompt_engine.app.prompt_engine import PromptEngine
-from prompt_engine.app.template_loader import TemplateLoader
+from app.models import PromptRequest
+from app.prompt_engine import PromptEngine
+from app.template_loader import TemplateLoader
 
 
 class DummyLLMClient:

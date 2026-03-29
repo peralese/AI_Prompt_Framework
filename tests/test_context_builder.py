@@ -1,4 +1,4 @@
-from prompt_engine.app.context_builder import build_context
+from app.context_builder import build_context
 
 
 def test_build_context_formats_nested_payload() -> None:

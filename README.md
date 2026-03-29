@@ -1,30 +1,94 @@
-# Prompt Engineering Toolkit
+# AI Prompt Framework
 
-This project is a reusable, plain-Python Prompt Engineering Toolkit for local AI development. It is intentionally general-purpose: the core engine is designed to support many prompt-driven tasks without locking the project into one domain or workflow.
+AI Prompt Framework is a reusable, plain-Python prompt engineering toolkit for local AI development. The project is intentionally general-purpose: it is designed to support many prompt-driven tasks without becoming primarily about one project, workflow, or domain.
 
-The toolkit keeps the architecture explicit and lightweight:
+The framework keeps the architecture explicit and lightweight:
 
 - prompt templates live on disk
 - structured input is converted into deterministic prompt context
 - the prompt engine handles template injection and model calls
-- validators handle JSON parsing and key checks
-- evaluation logs capture what was run and how it performed
+- validators handle JSON parsing and required-key checks
+- evaluation and experiment logs capture what was run and what happened
 
-## Current Phase 1 Capabilities
+Examples are demonstrations, not the definition of the framework. The included prompt categories show how the toolkit can be used for classification, summarization, extraction, and decisioning, but the core code should remain reusable across prompt categories. Experimentation should stay category-neutral where possible.
 
-- Reusable prompt engine orchestration
-- Template loading by category and name
-- Structured context building from dictionaries and lists
+## Current Architecture
+
+```text
+app/
+  __init__.py
+  config.py
+  context_builder.py
+  evaluator.py
+  experiment_runner.py
+  llm_client.py
+  logger.py
+  models.py
+  prompt_engine.py
+  template_loader.py
+  validators.py
+prompts/
+  classification/
+  decisioning/
+  extraction/
+  summarization/
+examples/
+  data/
+  run_classification_example.py
+  run_decision_example.py
+  run_experiment_example.py
+  run_extraction_example.py
+  run_summary_example.py
+evaluation_logs/
+experiment_logs/
+tests/
+README.md
+requirements.txt
+```
+
+## Phase 1 Capabilities
+
+Phase 1 established the reusable prompt engine foundation:
+
+- template loading by category and name
+- deterministic context building from dictionaries and lists
 - OpenAI integration through an isolated provider wrapper
 - JSON output validation and required-key checks
-- Centralized console logging
+- centralized console logging
 - JSONL-based evaluation logging
-- Runnable examples across multiple prompt categories
-- Pytest coverage for core utility modules
+- runnable examples across multiple prompt categories
+- pytest coverage for core utility modules
 
-## Example Categories
+## Phase 2 Roadmap
 
-The included examples demonstrate four common prompt patterns:
+- Phase 2A: Generic prompt experiment harness for comparing prompt versions against the same structured input
+- Phase 2B: Reusable evaluation datasets across prompt categories
+- Phase 2C: Evaluation rubric and scoring model
+- Phase 2D: Human-readable experiment summaries and findings
+- Later ideas:
+  - multiple LLM providers behind a shared interface
+  - richer schema validation and typed extraction flows
+  - prompt versioning strategy and naming conventions
+  - multi-step prompt pipelines
+
+## Phase 2A: Prompt Experiment Harness
+
+Phase 2A adds a generic comparison harness that runs multiple templates against the same input payload. This makes it easier to test prompt variations, compare prompt designs, and document what works without tying the framework to a single task type.
+
+The experiment harness is category-neutral:
+
+- it loads a simple JSON config
+- it reads one structured input file
+- it runs each template listed in the config against that same input
+- it optionally validates JSON output and required keys
+- it records one JSONL result per template run under `experiment_logs/`
+- it continues through validation failures so one bad prompt variant does not stop the experiment
+
+This supports Week 9 style goals around testing variations, comparing prompt designs, and keeping a written record of findings.
+
+## Example Prompt Categories
+
+The included examples demonstrate common prompt patterns:
 
 - `classification`: categorize a list of tools, technologies, or other items into structured labels
 - `summarization`: convert structured notes into concise executive-facing summaries
@@ -33,49 +97,37 @@ The included examples demonstrate four common prompt patterns:
 
 These are examples, not limits. You can add your own templates under `prompts/` and create new flows without changing the core engine.
 
-## Folder Structure
+## Experiment Config Format
 
-```text
-prompt_engine/
-  app/
-    __init__.py
-    config.py
-    context_builder.py
-    evaluator.py
-    llm_client.py
-    logger.py
-    models.py
-    prompt_engine.py
-    template_loader.py
-    validators.py
-  prompts/
-    classification/
-      software_classifier.txt
-    decisioning/
-      recommend_next_step.txt
-    extraction/
-      structured_extraction.txt
-    summarization/
-      executive_summary.txt
-  examples/
-    data/
-      sample_classification.json
-      sample_decision.json
-      sample_extraction.json
-      sample_summary.json
-    run_classification_example.py
-    run_decision_example.py
-    run_extraction_example.py
-    run_summary_example.py
-  tests/
-    test_context_builder.py
-    test_prompt_engine.py
-    test_template_loader.py
-    test_validators.py
-  .env.example
-  requirements.txt
-  README.md
+Experiments use a small JSON config file:
+
+```json
+{
+  "experiment_name": "summary_prompt_comparison",
+  "templates": [
+    "summarization/executive_summary",
+    "summarization/executive_summary_v2"
+  ],
+  "input_file": "sample_summary.json",
+  "expects_json": false,
+  "required_keys": []
+}
 ```
+
+Fields:
+
+- `experiment_name`: required
+- `templates`: required list of `category/template_name` identifiers
+- `input_file`: required path to a structured JSON payload
+- `expects_json`: optional boolean for JSON validation
+- `required_keys`: optional list of keys that must exist when JSON validation is enabled
+
+File naming is enough for prompt version comparison in this phase. For example:
+
+- `summarization/executive_summary`
+- `summarization/executive_summary_v2`
+- `extraction/structured_extraction`
+- `extraction/structured_extraction_v2`
 
 ## Setup
 
@@ -89,13 +141,13 @@ source .venv/bin/activate
 2. Install dependencies.
 
 ```bash
-pip install -r prompt_engine/requirements.txt
+pip install -r requirements.txt
 ```
 
-3. Copy the example environment file and set your API key.
+3. Create an environment file if needed and set your API key.
 
 ```bash
-cp prompt_engine/.env.example prompt_engine/.env
+cp .env.example .env
 ```
 
 ## Environment Variables
@@ -109,46 +161,60 @@ cp prompt_engine/.env.example prompt_engine/.env
 Run the examples from the repository root:
 
 ```bash
-python -m prompt_engine.examples.run_classification_example
-python -m prompt_engine.examples.run_summary_example
-python -m prompt_engine.examples.run_extraction_example
-python -m prompt_engine.examples.run_decision_example
+python3 examples/run_classification_example.py
+python3 examples/run_summary_example.py
+python3 examples/run_extraction_example.py
+python3 examples/run_decision_example.py
+python3 examples/run_experiment_example.py
 ```
 
-Each example:
+The experiment example uses [examples/data/sample_experiment_config.json](/home/peralese/Projects/AI_Prompt_Framework/examples/data/sample_experiment_config.json) to compare two summarization templates against the same input file.
 
-- loads sample input from `prompt_engine/examples/data/`
-- builds context through the prompt engine
-- validates JSON output when appropriate
-- prints the result
-- saves an evaluation record under `prompt_engine/evaluation_logs/`
+## How Experiments Work
+
+1. Create or reuse one structured input JSON file.
+2. List one or more template identifiers in an experiment config.
+3. Run the experiment example or call `ExperimentRunner` directly.
+4. Review console output for the high-level summary.
+5. Review `experiment_logs/<experiment_name>.jsonl` for per-template results.
+
+Each experiment record captures:
+
+- timestamp
+- experiment name
+- template name
+- input file
+- raw output
+- validation status
+- validation error, if any
+- run status and run error, if a prompt execution failed
+
+## Evaluation And Experiment Logs
+
+- `evaluation_logs/` stores general prompt run records from the example scripts
+- `experiment_logs/` stores one JSONL file per experiment, with one record per template run
 
 ## Running Tests
 
 ```bash
-pytest prompt_engine/tests
+pytest
 ```
 
 ## Extending The Toolkit
 
 To add a new use case:
 
-1. Create a new prompt template under a category in `prompt_engine/prompts/`
+1. Create a new prompt template under a category in `prompts/`
 2. Prepare a structured input payload
 3. Build a `PromptRequest` with the template name and input data
 4. Enable JSON validation if the prompt is expected to return structured output
-5. Add an example script or test if you want a reusable workflow
+5. Add an example script, experiment config, or test if you want a reusable workflow
 
-This keeps the framework general-purpose while letting future projects define their own domain-specific prompt assets.
+To compare prompt variants:
 
-## Evaluation Logging
+1. Add a second template file such as `_v2`
+2. Create an experiment config listing both variants
+3. Run the experiment harness
+4. Review the JSONL experiment log and compare outputs
 
-The evaluator writes JSONL records into `prompt_engine/evaluation_logs/`. Each prompt name gets its own log file so you can capture outputs, notes, and scores over time.
-
-## What Phase 2 Might Include
-
-- Multiple LLM providers behind a shared interface
-- Richer schema validation and typed extraction flows
-- Prompt versioning and experiment tracking
-- Batch execution and comparison tooling
-- Multi-step prompt pipelines
+This keeps the framework general-purpose while making prompt experimentation explicit and repeatable.

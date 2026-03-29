@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from prompt_engine.app.template_loader import TemplateLoader, TemplateNotFoundError
+from app.template_loader import TemplateLoader, TemplateNotFoundError
 
 
 def test_template_loader_reads_template_text() -> None:
