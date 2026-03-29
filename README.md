@@ -32,6 +32,7 @@ prompts/
   decisioning/
   extraction/
   summarization/
+datasets/
 examples/
   data/
   run_classification_example.py
@@ -62,7 +63,7 @@ Phase 1 established the reusable prompt engine foundation:
 ## Phase 2 Roadmap
 
 - Phase 2A: Completed. Generic prompt experiment harness for comparing prompt versions against the same structured input
-- Phase 2B: Reusable evaluation datasets across prompt categories
+- Phase 2B: Completed. Reusable evaluation datasets across prompt categories
 - Phase 2C: Evaluation rubric and scoring model
 - Phase 2D: Human-readable experiment summaries and findings
 - Later ideas:
@@ -95,6 +96,27 @@ Completed deliverables in this phase:
 - an example experiment config and runner script
 - test coverage for config loading, multi-template execution, and validation behavior
 
+## Phase 2B: Reusable Evaluation Datasets
+
+Phase 2B is complete. It extends the experiment harness so experiments can run reusable multi-case datasets instead of only a single input file. This keeps experimentation generic while making it easier to compare prompt variants across a broader set of structured inputs.
+
+The dataset layer is still category-neutral:
+
+- datasets are plain JSON files under `datasets/`
+- each dataset has a `dataset_name` and a list of reusable `cases`
+- each case has a `case_id` plus an `input_payload`
+- experiments can now point to either `input_file` or `dataset_file`
+- the experiment runner executes every template against every dataset case
+- experiment logs now capture dataset and case identifiers for later scoring and reporting
+
+Completed deliverables in this phase:
+
+- reusable dataset models and a dataset loader
+- support for `dataset_file` in experiment configs
+- multi-case experiment execution across templates
+- a generic summarization evaluation dataset
+- pytest coverage for dataset loading and dataset-based experiment runs
+
 ## Example Prompt Categories
 
 The included examples demonstrate common prompt patterns:
@@ -117,7 +139,7 @@ Experiments use a small JSON config file:
     "summarization/executive_summary",
     "summarization/executive_summary_v2"
   ],
-  "input_file": "sample_summary.json",
+  "dataset_file": "../../datasets/summary_evaluation_dataset.json",
   "expects_json": false,
   "required_keys": []
 }
@@ -128,8 +150,41 @@ Fields:
 - `experiment_name`: required
 - `templates`: required list of `category/template_name` identifiers
 - `input_file`: required path to a structured JSON payload
+- `dataset_file`: optional path to a reusable dataset JSON file
 - `expects_json`: optional boolean for JSON validation
 - `required_keys`: optional list of keys that must exist when JSON validation is enabled
+
+An experiment should provide either `input_file` for a single-case run or `dataset_file` for a reusable multi-case run.
+
+## Dataset Format
+
+Reusable datasets use a simple JSON structure:
+
+```json
+{
+  "dataset_name": "summary_evaluation_dataset",
+  "category": "summarization",
+  "cases": [
+    {
+      "case_id": "summary_case_1",
+      "description": "Delivery status update with risks and next actions",
+      "input_payload": {
+        "project_name": "Customer Insights Dashboard",
+        "status": "In delivery"
+      }
+    }
+  ]
+}
+```
+
+Fields:
+
+- `dataset_name`: required
+- `category`: optional descriptive label
+- `cases`: required list of reusable prompt input cases
+- `case_id`: required per case
+- `input_payload`: required per case
+- `description`: optional per case
 
 File naming is enough for prompt version comparison in this phase. For example:
 
@@ -177,11 +232,11 @@ python3 examples/run_decision_example.py
 python3 examples/run_experiment_example.py
 ```
 
-The experiment example uses [examples/data/sample_experiment_config.json](/home/peralese/Projects/AI_Prompt_Framework/examples/data/sample_experiment_config.json) to compare two summarization templates against the same input file.
+The experiment example uses [examples/data/sample_experiment_config.json](/home/peralese/Projects/AI_Prompt_Framework/examples/data/sample_experiment_config.json) and [datasets/summary_evaluation_dataset.json](/home/peralese/Projects/AI_Prompt_Framework/datasets/summary_evaluation_dataset.json) to compare two summarization templates across a reusable multi-case dataset.
 
 ## How Experiments Work
 
-1. Create or reuse one structured input JSON file.
+1. Create or reuse one structured input JSON file or a reusable dataset file.
 2. List one or more template identifiers in an experiment config.
 3. Run the experiment example or call `ExperimentRunner` directly.
 4. Review console output for the high-level summary.
@@ -193,6 +248,8 @@ Each experiment record captures:
 - experiment name
 - template name
 - input file
+- dataset name, when applicable
+- case id, when applicable
 - raw output
 - validation status
 - validation error, if any
@@ -225,5 +282,12 @@ To compare prompt variants:
 2. Create an experiment config listing both variants
 3. Run the experiment harness
 4. Review the JSONL experiment log and compare outputs
+
+To reuse evaluation inputs across experiments:
+
+1. Create a dataset file under `datasets/`
+2. Add multiple named cases with structured payloads
+3. Point an experiment config at `dataset_file`
+4. Reuse that dataset across prompt versions and categories where appropriate
 
 This keeps the framework general-purpose while making prompt experimentation explicit and repeatable.

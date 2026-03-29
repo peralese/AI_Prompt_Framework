@@ -4,7 +4,7 @@
     "summarization/executive_summary",
     "summarization/executive_summary_v2"
   ],
-  "input_file": "sample_summary.json",
+  "dataset_file": "../../datasets/summary_evaluation_dataset.json",
   "expects_json": false,
   "required_keys": []
 }

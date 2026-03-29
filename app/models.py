@@ -45,7 +45,8 @@ class ExperimentConfig(BaseModel):
 
     experiment_name: str
     templates: list[str]
-    input_file: str
+    input_file: str | None = None
+    dataset_file: str | None = None
     expects_json: bool = False
     required_keys: list[str] = Field(default_factory=list)
 
@@ -57,6 +58,9 @@ class ExperimentRunResult(BaseModel):
     experiment_name: str
     template_name: str
     input_file: str
+    dataset_name: str | None = None
+    case_id: str | None = None
+    case_description: str | None = None
     raw_output: str | None = None
     validation_status: str
     validation_error: str | None = None
@@ -64,3 +68,20 @@ class ExperimentRunResult(BaseModel):
     run_error: str | None = None
     model: str | None = None
     template_path: str | None = None
+
+
+class DatasetCase(BaseModel):
+    """Single reusable evaluation case."""
+
+    case_id: str
+    input_payload: dict[str, Any]
+    description: str | None = None
+    notes: str | None = None
+
+
+class EvaluationDataset(BaseModel):
+    """Reusable dataset for prompt experiments."""
+
+    dataset_name: str
+    category: str | None = None
+    cases: list[DatasetCase]

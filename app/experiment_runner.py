@@ -5,9 +5,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from .dataset_loader import DatasetLoader
 from .evaluator import Evaluator
 from .logger import get_logger
-from .models import ExperimentConfig, ExperimentRunResult, PromptRequest
+from .models import DatasetCase, ExperimentConfig, ExperimentRunResult, PromptRequest
 from .prompt_engine import PromptEngine
 from .validators import ValidationError, validate_json_output, validate_required_keys
 
@@ -19,9 +20,11 @@ class ExperimentRunner:
         self,
         prompt_engine: PromptEngine | None = None,
         evaluator: Evaluator | None = None,
+        dataset_loader: DatasetLoader | None = None,
     ) -> None:
         self.prompt_engine = prompt_engine or PromptEngine()
         self.evaluator = evaluator or Evaluator()
+        self.dataset_loader = dataset_loader or DatasetLoader()
         self.logger = get_logger(self.__class__.__name__)
 
     def load_config(self, config_path: str | Path) -> tuple[ExperimentConfig, Path]:
@@ -46,54 +49,76 @@ class ExperimentRunner:
         """Execute all template runs defined in an experiment config."""
 
         base_path = Path(base_dir).resolve() if base_dir else Path.cwd()
-        input_path = self._resolve_path(config.input_file, base_path)
-        input_payload = json.loads(input_path.read_text(encoding="utf-8"))
+        dataset_name = None
+        if config.dataset_file:
+            dataset_path = self._resolve_path(config.dataset_file, base_path)
+            dataset, resolved_dataset_path = self.dataset_loader.load(dataset_path)
+            dataset_name = dataset.dataset_name
+            cases = dataset.cases
+            input_reference = str(resolved_dataset_path)
+        else:
+            if not config.input_file:
+                raise ValueError(
+                    "Experiment config must include either 'input_file' or 'dataset_file'."
+                )
+            input_path = self._resolve_path(config.input_file, base_path)
+            input_payload = json.loads(input_path.read_text(encoding="utf-8"))
+            cases = [DatasetCase(case_id="input_1", input_payload=input_payload)]
+            input_reference = str(input_path)
 
         results: list[ExperimentRunResult] = []
         log_path: Path | None = None
-        for template_identifier in config.templates:
-            category, template_name = self._split_template_identifier(template_identifier)
-            run_result = ExperimentRunResult(
-                experiment_name=config.experiment_name,
-                template_name=template_identifier,
-                input_file=str(input_path),
-                validation_status="not_requested",
-            )
+        for case in cases:
+            for template_identifier in config.templates:
+                category, template_name = self._split_template_identifier(
+                    template_identifier
+                )
+                run_result = ExperimentRunResult(
+                    experiment_name=config.experiment_name,
+                    template_name=template_identifier,
+                    input_file=input_reference,
+                    dataset_name=dataset_name,
+                    case_id=case.case_id,
+                    case_description=case.description,
+                    validation_status="not_requested",
+                )
 
-            try:
-                response = self.prompt_engine.run(
-                    PromptRequest(
-                        category=category,
-                        template_name=template_name,
-                        input_payload=input_payload,
-                        require_json_output=False,
+                try:
+                    response = self.prompt_engine.run(
+                        PromptRequest(
+                            category=category,
+                            template_name=template_name,
+                            input_payload=case.input_payload,
+                            require_json_output=False,
+                        )
                     )
-                )
-                run_result.raw_output = response.raw_output
-                run_result.model = response.model
-                run_result.template_path = response.template_path
-                (
-                    run_result.validation_status,
-                    run_result.validation_error,
-                ) = self._validate_output(
-                    raw_output=response.raw_output,
-                    expects_json=config.expects_json,
-                    required_keys=config.required_keys,
-                )
-            except Exception as exc:  # pragma: no cover - defensive catch
-                self.logger.exception(
-                    "Experiment run failed for template '%s'.", template_identifier
-                )
-                run_result.run_status = "failed"
-                run_result.run_error = str(exc)
-                if config.expects_json:
-                    run_result.validation_status = "skipped"
-                    run_result.validation_error = "Validation skipped because prompt execution failed."
+                    run_result.raw_output = response.raw_output
+                    run_result.model = response.model
+                    run_result.template_path = response.template_path
+                    (
+                        run_result.validation_status,
+                        run_result.validation_error,
+                    ) = self._validate_output(
+                        raw_output=response.raw_output,
+                        expects_json=config.expects_json,
+                        required_keys=config.required_keys,
+                    )
+                except Exception as exc:  # pragma: no cover - defensive catch
+                    self.logger.exception(
+                        "Experiment run failed for template '%s'.", template_identifier
+                    )
+                    run_result.run_status = "failed"
+                    run_result.run_error = str(exc)
+                    if config.expects_json:
+                        run_result.validation_status = "skipped"
+                        run_result.validation_error = (
+                            "Validation skipped because prompt execution failed."
+                        )
 
-            log_path = self.evaluator.save_experiment_result(run_result)
-            results.append(run_result)
+                log_path = self.evaluator.save_experiment_result(run_result)
+                results.append(run_result)
 
-        self._print_summary(config.experiment_name, results, log_path)
+        self._print_summary(config.experiment_name, results, log_path, len(cases))
         return results
 
     def _validate_output(
@@ -121,6 +146,7 @@ class ExperimentRunner:
         experiment_name: str,
         results: list[ExperimentRunResult],
         log_path: Path | None,
+        case_count: int,
     ) -> None:
         """Print a concise console summary for an experiment run."""
 
@@ -129,6 +155,7 @@ class ExperimentRunner:
         skipped = sum(result.run_status == "failed" for result in results)
 
         print(f"Experiment: {experiment_name}")
+        print(f"Cases run: {case_count}")
         print(f"Templates run: {len(results)}")
         print(f"Validation passed: {passed}")
         print(f"Validation failed: {failed}")

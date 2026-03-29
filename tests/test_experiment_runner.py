@@ -57,6 +57,38 @@ def test_load_config_reads_experiment_settings(tmp_path: Path) -> None:
     assert resolved_path == config_path.resolve()
 
 
+def test_load_config_reads_dataset_experiment_settings(tmp_path: Path) -> None:
+    config_path = tmp_path / "experiment.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "experiment_name": "summary_dataset_comparison",
+                "templates": ["summarization/executive_summary"],
+                "dataset_file": "dataset.json",
+                "expects_json": False,
+                "required_keys": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    runner = ExperimentRunner(
+        prompt_engine=StubPromptEngine({}),
+        evaluator=Evaluator(experiment_log_dir=tmp_path / "logs"),
+    )
+
+    config, resolved_path = runner.load_config(config_path)
+
+    assert config == ExperimentConfig(
+        experiment_name="summary_dataset_comparison",
+        templates=["summarization/executive_summary"],
+        dataset_file="dataset.json",
+        expects_json=False,
+        required_keys=[],
+    )
+    assert resolved_path == config_path.resolve()
+
+
 def test_run_experiment_executes_multiple_templates(tmp_path: Path) -> None:
     input_path = tmp_path / "input.json"
     input_payload = {"status": "In delivery"}
@@ -90,6 +122,58 @@ def test_run_experiment_executes_multiple_templates(tmp_path: Path) -> None:
         "summarization/executive_summary_v2",
     ]
     assert all(result.raw_output for result in results)
+    assert all(result.validation_status == "not_requested" for result in results)
+
+
+def test_run_experiment_executes_dataset_cases(tmp_path: Path) -> None:
+    dataset_path = tmp_path / "dataset.json"
+    dataset_path.write_text(
+        json.dumps(
+            {
+                "dataset_name": "summary_dataset",
+                "category": "summarization",
+                "cases": [
+                    {
+                        "case_id": "case_1",
+                        "description": "First summary case",
+                        "input_payload": {"status": "In delivery"},
+                    },
+                    {
+                        "case_id": "case_2",
+                        "description": "Second summary case",
+                        "input_payload": {"status": "Blocked"},
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    runner = ExperimentRunner(
+        prompt_engine=StubPromptEngine(
+            {
+                "summarization/executive_summary": "Summary output",
+                "summarization/executive_summary_v2": "Summary output v2",
+            }
+        ),
+        evaluator=Evaluator(experiment_log_dir=tmp_path / "logs"),
+    )
+
+    results = runner.run_experiment(
+        ExperimentConfig(
+            experiment_name="summary_dataset_comparison",
+            templates=[
+                "summarization/executive_summary",
+                "summarization/executive_summary_v2",
+            ],
+            dataset_file=str(dataset_path),
+        ),
+        base_dir=tmp_path,
+    )
+
+    assert len(results) == 4
+    assert {result.case_id for result in results} == {"case_1", "case_2"}
+    assert {result.dataset_name for result in results} == {"summary_dataset"}
     assert all(result.validation_status == "not_requested" for result in results)
 
 
