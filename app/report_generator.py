@@ -89,6 +89,9 @@ class ExperimentReportGenerator:
                 result.rubric_score / result.rubric_max_score for result in scored_results
             ) / len(scored_results)
 
+        dimension_scores = self._summarize_dimension_scores(results)
+        score_notes = self._collect_score_notes(results)
+
         strengths: list[str] = []
         concerns: list[str] = []
         if completion_rate == 1.0:
@@ -107,6 +110,8 @@ class ExperimentReportGenerator:
                 strengths.append(f"Achieved a strong average rubric score of {average_score:.0%}.")
             elif average_score < 0.6:
                 concerns.append(f"Average rubric score was {average_score:.0%}.")
+        if score_notes:
+            concerns.extend(score_notes[:3])
 
         if not strengths:
             strengths.append("Produced usable output for comparison.")
@@ -117,8 +122,10 @@ class ExperimentReportGenerator:
             completion_rate=completion_rate,
             validation_pass_rate=validation_pass_rate,
             average_score=average_score,
+            dimension_scores=dimension_scores,
             strengths=strengths,
             concerns=concerns,
+            score_notes=score_notes,
         )
 
     def _select_best_template(self, findings: list[TemplateFinding]) -> str | None:
@@ -157,6 +164,64 @@ class ExperimentReportGenerator:
 
         return issues
 
+    def _summarize_dimension_scores(
+        self, results: list[ExperimentRunResult]
+    ) -> list[dict[str, object]]:
+        """Aggregate average dimension scores for a template."""
+
+        aggregated: dict[str, dict[str, float | str]] = {}
+        for result in results:
+            for item in result.rubric_breakdown:
+                criterion_id = str(item.get("criterion_id"))
+                entry = aggregated.setdefault(
+                    criterion_id,
+                    {
+                        "criterion_id": criterion_id,
+                        "description": str(item.get("description", criterion_id)),
+                        "raw_total": 0.0,
+                        "scale_total": 0.0,
+                        "count": 0.0,
+                    },
+                )
+                entry["raw_total"] += float(item.get("raw_score", 0.0))
+                entry["scale_total"] += float(item.get("scale_max", 0.0))
+                entry["count"] += 1.0
+
+        summarized: list[dict[str, object]] = []
+        for criterion_id, entry in aggregated.items():
+            count = float(entry["count"])
+            scale_total = float(entry["scale_total"])
+            average_ratio = (
+                float(entry["raw_total"]) / scale_total if scale_total else 0.0
+            )
+            summarized.append(
+                {
+                    "criterion_id": criterion_id,
+                    "description": entry["description"],
+                    "average_ratio": average_ratio,
+                }
+            )
+        return sorted(
+            summarized,
+            key=lambda item: str(item["criterion_id"]),
+        )
+
+    def _collect_score_notes(self, results: list[ExperimentRunResult]) -> list[str]:
+        """Collect recurring low-score notes for a template."""
+
+        note_counts: dict[str, int] = {}
+        for result in results:
+            for item in result.rubric_breakdown:
+                note = str(item.get("note", "")).strip()
+                raw_score = float(item.get("raw_score", 0.0))
+                scale_max = float(item.get("scale_max", 0.0))
+                if note and scale_max and (raw_score / scale_max) < 0.8:
+                    note_counts[note] = note_counts.get(note, 0) + 1
+
+        return [
+            note for note, _count in sorted(note_counts.items(), key=lambda item: (-item[1], item[0]))
+        ]
+
     def _render_markdown(self, report: ExperimentReport) -> str:
         """Render a markdown experiment summary."""
 
@@ -184,6 +249,12 @@ class ExperimentReportGenerator:
                 lines.append(f"- Validation pass rate: {finding.validation_pass_rate:.0%}")
             if finding.average_score is not None:
                 lines.append(f"- Average rubric score: {finding.average_score:.0%}")
+            if finding.dimension_scores:
+                lines.append("- Dimension scores:")
+                for item in finding.dimension_scores:
+                    lines.append(
+                        f"  - {item['criterion_id']}: {float(item['average_ratio']):.0%}"
+                    )
             lines.append(f"- Strengths: {' '.join(finding.strengths)}")
             if finding.concerns:
                 lines.append(f"- Concerns: {' '.join(finding.concerns)}")
@@ -253,6 +324,15 @@ class ExperimentReportGenerator:
                     lines.append(
                         f"- Rubric score: {result.rubric_score}/{result.rubric_max_score}"
                     )
+                    if result.rubric_breakdown:
+                        lines.append("- Dimension scores:")
+                        for item in result.rubric_breakdown:
+                            lines.append(
+                                f"  - {item['criterion_id']}: {item['raw_score']}/{item['scale_max']}"
+                            )
+                            note = str(item.get("note", "")).strip()
+                            if note:
+                                lines.append(f"    Note: {note}")
                 elif result.scoring_status != "not_requested":
                     lines.append(f"- Scoring status: {result.scoring_status}")
                 if result.notes:

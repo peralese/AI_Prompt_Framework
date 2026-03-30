@@ -3,37 +3,100 @@
   "category": "summarization",
   "criteria": [
     {
-      "criterion_id": "non_empty_output",
-      "description": "The output should not be empty.",
-      "rule_type": "non_empty_output",
-      "weight": 1.0
-    },
-    {
-      "criterion_id": "mentions_project_context",
-      "description": "The summary should reference at least one core input value.",
-      "rule_type": "contains_any_input_values",
-      "weight": 2.0,
+      "criterion_id": "executive_readability",
+      "description": "The summary should be concise, readable, and appropriate for a business audience.",
+      "rule_type": "summarization_executive_readability",
+      "weight": 1.5,
+      "scale_max": 5,
+      "guidance": {
+        "0": "Unreadable, empty, or dominated by dense technical detail.",
+        "1": "Hard to read. Dense, poorly structured, or too technical for a business audience.",
+        "3": "Clear paragraph-style summary. Readable and business-appropriate, even if not especially crisp.",
+        "5": "Very concise, crisp, and easy to scan. Structured or clearly segmented for fast executive review."
+      },
       "config": {
-        "input_keys": ["project_name", "status"]
+        "max_sentences": 6,
+        "max_avg_sentence_words": 24,
+        "technical_terms": [
+          "server",
+          "database",
+          "api",
+          "infrastructure",
+          "latency",
+          "pipeline",
+          "mapping",
+          "schema",
+          "deployment",
+          "integration"
+        ]
       }
     },
     {
-      "criterion_id": "mentions_risks",
-      "description": "The summary should mention risk-related language.",
-      "rule_type": "contains_all_strings",
-      "weight": 1.0,
+      "criterion_id": "structure_and_instruction_adherence",
+      "description": "The summary should be organized, put status or current position up front, and follow the intended executive-summary style.",
+      "rule_type": "summarization_structure_adherence",
+      "weight": 1.25,
+      "scale_max": 5,
+      "guidance": {
+        "0": "No clear structure or instruction adherence.",
+        "1": "Poor structure. Important context is buried or the response is rambling.",
+        "3": "Reasonably organized, but only partly aligned to the intended style.",
+        "5": "Strong structure. Status comes early and risks or next steps are placed coherently."
+      },
       "config": {
-        "strings": ["risk"]
+        "prefer_two_paragraphs": true,
+        "status_first": true,
+        "prefer_risks_and_actions": true
       }
     },
     {
-      "criterion_id": "reasonable_length",
-      "description": "The summary should stay within a concise length range.",
-      "rule_type": "output_length_between",
-      "weight": 1.0,
+      "criterion_id": "signal_vs_noise",
+      "description": "The summary should emphasize the most important business-relevant points and avoid low-value detail.",
+      "rule_type": "summarization_signal_to_noise",
+      "weight": 1.25,
+      "scale_max": 5,
+      "guidance": {
+        "0": "Mostly noise or irrelevant detail.",
+        "1": "Dominated by raw detail, infrastructure content, or low-value information.",
+        "3": "Captures the main business points and avoids most unnecessary detail, even if some lower-value information remains.",
+        "5": "Highly focused on decisions, risks, impact, and priorities with little or no unnecessary detail."
+      },
       "config": {
-        "min_chars": 80,
-        "max_chars": 700
+        "preferred_input_keys": ["status", "highlights", "risks", "next_actions"]
+      }
+    },
+    {
+      "criterion_id": "risk_identification",
+      "description": "When risks, dependencies, uncertainties, or unresolved issues are present, the summary should surface them clearly.",
+      "rule_type": "summarization_risk_identification",
+      "weight": 1.0,
+      "scale_max": 5,
+      "guidance": {
+        "0": "Risks are missing entirely despite being present in the input.",
+        "1": "Risks are only hinted at or are too vague to be useful.",
+        "3": "Risks are mentioned, but not clearly emphasized.",
+        "5": "Risks are clearly identified and easy to understand."
+      },
+      "config": {
+        "risk_input_key": "risks",
+        "risk_keywords": ["risk", "issue", "dependency", "uncertainty", "blocked", "delay"]
+      }
+    },
+    {
+      "criterion_id": "actionability",
+      "description": "When next actions or priorities are present, the summary should surface them clearly and make the immediate path forward understandable.",
+      "rule_type": "summarization_actionability",
+      "weight": 1.0,
+      "scale_max": 5,
+      "guidance": {
+        "0": "Next steps are missing entirely despite being present in the input.",
+        "1": "No clear actions or next steps are surfaced.",
+        "3": "Actions are present but vague, implicit, or not clearly prioritized.",
+        "5": "Next actions are explicit, clear, and directionally useful for the audience."
+      },
+      "config": {
+        "actions_input_key": "next_actions",
+        "action_keywords": ["next", "action", "priority", "focus", "complete", "confirm", "finalize"]
       }
     }
   ]

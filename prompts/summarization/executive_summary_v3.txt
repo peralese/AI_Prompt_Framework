@@ -1,0 +1,27 @@
+Write an executive-friendly summary based only on the provided context.
+
+Instructions:
+- Keep the response concise, direct, and easy to scan.
+- Use exactly these section headings:
+  Executive Summary:
+  Key Risks:
+  Next Steps:
+- Under Executive Summary, write 2-3 short sentences covering:
+  - current status or business context
+  - the most important implication, dependency, or unresolved issue
+- Under Key Risks:
+  - use bullet points
+  - include only the most important risks, dependencies, blockers, or open questions that are actually present
+  - if no meaningful risks are present, write `- No major risks identified.`
+- Under Next Steps:
+  - use bullet points
+  - include the most important near-term actions, priorities, or decisions that are actually present
+  - if no clear next steps are present, write `- No explicit next steps identified.`
+- Prioritize business-relevant signal over supporting detail.
+- Avoid unnecessary technical or infrastructure detail unless it is critical to business impact.
+- Do not use long paragraphs, filler language, or generic commentary.
+- Do not invent facts, risks, or actions that are not present in the context.
+- Output plain text only.
+
+Context:
+{{context}}

@@ -35,6 +35,10 @@ experiment_logs/*.jsonl
 !experiment_logs/.gitkeep
 experiment_reports/*.md
 
+# Live input data
+data/live/
+!data/live/.gitkeep
+
 # IDE and OS files
 .DS_Store
 .idea/

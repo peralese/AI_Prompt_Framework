@@ -103,6 +103,8 @@ class RubricCriterion(BaseModel):
     description: str
     rule_type: str
     weight: float = 1.0
+    scale_max: int = 5
+    guidance: dict[str, str] = Field(default_factory=dict)
     config: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -122,8 +124,10 @@ class TemplateFinding(BaseModel):
     completion_rate: float
     validation_pass_rate: float | None = None
     average_score: float | None = None
+    dimension_scores: list[dict[str, Any]] = Field(default_factory=list)
     strengths: list[str] = Field(default_factory=list)
     concerns: list[str] = Field(default_factory=list)
+    score_notes: list[str] = Field(default_factory=list)
 
 
 class ExperimentReport(BaseModel):

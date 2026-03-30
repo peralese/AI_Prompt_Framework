@@ -249,6 +249,17 @@ Current generic rule types:
 - `contains_any_input_values`
 - `contains_all_strings`
 - `json_keys_present`
+- category-specific rules can also be defined when a rubric needs task-aware scoring
+
+Rubrics remain part of the generic framework, but an individual rubric can be category-specific. The summarization rubric, for example, now scores executive-summary quality across:
+
+- executive readability
+- structure and instruction adherence
+- signal vs noise
+- risk identification
+- actionability and next-step clarity
+
+This improves prompt comparison because two summaries that are both "valid" can now score differently when one is more concise, more executive-friendly, more focused, and better aligned to the intended summary style.
 
 ## Console Output And Saved Artifacts
 

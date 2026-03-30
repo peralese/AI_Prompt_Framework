@@ -17,6 +17,15 @@ def test_report_generator_summarizes_results() -> None:
             rubric_name="summary_rubric",
             rubric_score=4.0,
             rubric_max_score=5.0,
+            rubric_breakdown=[
+                {
+                    "criterion_id": "executive_readability",
+                    "description": "Executive readability",
+                    "raw_score": 3,
+                    "scale_max": 5,
+                    "note": "Too verbose for an executive summary.",
+                }
+            ],
             raw_output="Summary one",
         ),
         ExperimentRunResult(
@@ -31,6 +40,15 @@ def test_report_generator_summarizes_results() -> None:
             rubric_name="summary_rubric",
             rubric_score=5.0,
             rubric_max_score=5.0,
+            rubric_breakdown=[
+                {
+                    "criterion_id": "executive_readability",
+                    "description": "Executive readability",
+                    "raw_score": 5,
+                    "scale_max": 5,
+                    "note": "",
+                }
+            ],
             raw_output="Summary two",
         ),
     ]
@@ -43,6 +61,7 @@ def test_report_generator_summarizes_results() -> None:
     assert report.total_cases == 1
     assert "Current best template" in report.markdown
     assert "summary_rubric" in report.markdown
+    assert "executive_readability" in report.markdown
     assert "Readable Experiment Comparison" in report.readable_markdown
     assert "### Template: summarization/executive_summary_v2" in report.readable_markdown
     assert "```json" in report.readable_markdown
@@ -88,6 +107,15 @@ def test_report_generator_includes_notes_and_scores_in_readable_report() -> None
             scoring_status="scored",
             rubric_score=3.0,
             rubric_max_score=4.0,
+            rubric_breakdown=[
+                {
+                    "criterion_id": "classification_focus",
+                    "description": "Classification focus",
+                    "raw_score": 2,
+                    "scale_max": 5,
+                    "note": "Low confidence on one item.",
+                }
+            ],
             raw_output='{"items": [{"name": "Redis"}]}',
         )
     ]
@@ -97,3 +125,5 @@ def test_report_generator_includes_notes_and_scores_in_readable_report() -> None
     assert "Baseline case for review." in report.readable_markdown
     assert "Rubric score: 3.0/4.0" in report.readable_markdown
     assert "Validation status: passed" in report.readable_markdown
+    assert "classification_focus: 2/5" in report.readable_markdown
+    assert "Low confidence on one item." in report.readable_markdown
