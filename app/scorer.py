@@ -286,11 +286,29 @@ class ExperimentScorer:
                 lower_output,
             )
         )
+        business_decision_markers = criterion.config.get(
+            "business_decision_markers",
+            ["under review", "uncertain future", "pending approval", "decision", "status"],
+        )
+        dependency_markers = criterion.config.get(
+            "dependency_markers",
+            ["dependency", "dependencies", "blocked", "key project", "upstream", "critical path"],
+        )
         has_risk_language = any(
             keyword in lower_output for keyword in ["risk", "issue", "dependency", "uncertainty"]
         )
         has_action_language = any(
             keyword in lower_output for keyword in ["next", "action", "priority", "focus"]
+        )
+        has_decision_context = self._contains_phrase_or_input_reference(
+            lower_output=lower_output,
+            phrases=business_decision_markers,
+            input_value=input_payload.get("status"),
+        )
+        has_dependency_context = self._contains_phrase_or_input_reference(
+            lower_output=lower_output,
+            phrases=dependency_markers,
+            input_value=input_payload.get("risks"),
         )
         has_list_structure = any(
             line.strip().startswith(("- ", "* ", "1. ", "2. ", "3. "))
@@ -301,23 +319,44 @@ class ExperimentScorer:
         notes: list[str] = []
         if signal_hits <= 1:
             score = 1
-            notes.append("Key business signal is buried or missing")
+            notes.append("Key business message is unclear or buried under low-value detail")
         elif signal_hits == 2:
-            score = 3
+            score = 2
+            notes.append("Main idea is present but diluted by lower-value detail")
         else:
-            score = 4
+            score = 3
+            notes.append("Captures main business points clearly with only minor extra detail")
 
         if has_risk_language and has_action_language and signal_hits >= 3:
             score += 1
-        if has_list_structure and has_risk_language and has_action_language:
+        if has_list_structure and has_risk_language and has_action_language and signal_hits >= 3:
             score += 1
 
-        if len(raw_output) > 850 or digit_count >= 12 or acronym_hits >= 5 or technical_detail_hits >= 5:
+        if (
+            len(raw_output) > 1000
+            or digit_count >= 16
+            or acronym_hits >= 7
+            or technical_detail_hits >= 7
+        ):
             score = min(score, 1)
-            notes.append("Includes infrastructure detail that is not critical for executive audience")
-        elif len(raw_output) > 650 or digit_count >= 8 or acronym_hits >= 3 or technical_detail_hits >= 3:
+            notes.append("Dominated by infrastructure or technical detail, so the business message is hard to follow")
+        elif (
+            len(raw_output) > 800
+            or digit_count >= 10
+            or acronym_hits >= 5
+            or technical_detail_hits >= 5
+        ):
             score = min(score, 2)
-            notes.append("Captures the main points but still carries some low-value detail")
+            notes.append("Captures the main points but includes noticeable low-value detail")
+        elif technical_detail_hits >= 3 or acronym_hits >= 3:
+            score = min(score, 3)
+            notes.append("Captures main points but includes some unnecessary infrastructure detail")
+
+        if has_decision_context and has_dependency_context:
+            score = max(score, 3)
+            notes.append("Strong focus on business decision and dependency")
+        elif has_decision_context or has_dependency_context:
+            score = max(score, 2)
 
         return max(0, min(score, criterion.scale_max)), (
             None if not notes else self._format_notes(notes)
@@ -384,24 +423,42 @@ class ExperimentScorer:
             "should now",
             "priority is to",
             "focus is to",
+            "to be done",
         ]
         has_explicit_direction = any(phrase in lower_output for phrase in explicit_action_phrases)
+        has_next_steps_label = any(
+            phrase in lower_output for phrase in ["next step", "next steps", "action", "actions"]
+        )
+        has_bullet_actions = any(
+            line.strip().startswith(("- ", "* ", "1. ", "2. ", "3. "))
+            for line in raw_output.splitlines()
+        )
+        has_named_responsibility = bool(
+            re.search(
+                r"\b(team|owner|owners|lead|pm|manager|engineering|analytics|operations)\b",
+                lower_output,
+            )
+        ) and "should" in lower_output
+        has_structured_next_steps = has_next_steps_label or has_bullet_actions
+        has_strong_action_signal = has_explicit_direction or has_structured_next_steps or has_named_responsibility
 
-        if not has_action_language and matched_action_terms == 0:
-            return 1, "No clear next steps are surfaced."
-        if not has_action_language:
-            if matched_action_terms <= 1:
-                return 2, "Next steps are only implied and need clearer direction."
-            return 3, "Next steps are present but could be more explicit or prioritized."
-        if matched_action_terms == 0:
-            return 2, "Next steps are implied but not explicit."
-        if matched_action_terms <= 2 and not has_explicit_direction:
-            return 3, "Next steps are present but could be more explicit or prioritized."
-        if matched_action_terms == 1:
-            return 4, "Next steps are clear, but ownership or priority could be sharper."
-        if not has_explicit_direction:
-            return 4, "Next steps are present but could be more explicit or prioritized."
-        return criterion.scale_max, None
+        if matched_action_terms == 0 and not has_strong_action_signal and not has_action_language:
+            return 1, "No clear actions identified."
+        if matched_action_terms <= 2 and not has_strong_action_signal and not has_action_language:
+            return 1, "No clear actions identified."
+        if matched_action_terms == 0 and (has_action_language or has_strong_action_signal):
+            return 2, "Actions are implied but not clearly stated."
+        if matched_action_terms <= 1 and has_action_language and not has_strong_action_signal:
+            return 2, "Actions are implied but not clearly stated."
+        if not has_strong_action_signal:
+            return 3, "Next steps are present but could be more explicit."
+        if has_bullet_actions and has_named_responsibility and "priority" in lower_output:
+            return criterion.scale_max, None
+        if has_structured_next_steps and matched_action_terms >= 1:
+            return 4, "Clear next steps are present, but ownership or prioritization could be sharper."
+        if has_explicit_direction and matched_action_terms >= 2:
+            return 3, "Next steps are present but could be more explicit."
+        return 3, "Next steps are present but could be more explicit."
 
     def _score_boolean(self, passed: bool, scale_max: int) -> int:
         """Return a full or zero score for a boolean criterion."""
@@ -434,6 +491,15 @@ class ExperimentScorer:
         if isinstance(value, list):
             return any(str(item).lower() in lower_output for item in value)
         return str(value).lower() in lower_output
+
+    def _contains_phrase_or_input_reference(
+        self, lower_output: str, phrases: list[str], input_value: Any
+    ) -> bool:
+        """Check whether the output signals a concept via phrases or reflected input text."""
+
+        return any(phrase in lower_output for phrase in phrases) or self._references_input_value(
+            lower_output, input_value
+        )
 
     def _count_keyword_matches(self, input_items: Any, lower_output: str) -> int:
         """Count how many input items have at least one keyword reflected in the output."""

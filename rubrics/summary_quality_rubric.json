@@ -57,12 +57,29 @@
       "scale_max": 5,
       "guidance": {
         "0": "Mostly noise or irrelevant detail.",
-        "1": "Dominated by raw detail, infrastructure content, or low-value information.",
-        "3": "Captures the main business points and avoids most unnecessary detail, even if some lower-value information remains.",
-        "5": "Highly focused on decisions, risks, impact, and priorities with little or no unnecessary detail."
+        "1": "Dominated by irrelevant or technical detail, and the key business message is unclear or missing.",
+        "2": "The main idea is present but buried or diluted by noticeable low-value detail.",
+        "3": "Captures the main business points clearly, with only some minor unnecessary detail.",
+        "4": "Focused on key decisions, risks, and impact, with minimal unnecessary detail.",
+        "5": "Extremely focused with executive-level clarity and no noise."
       },
       "config": {
-        "preferred_input_keys": ["status", "highlights", "risks", "next_actions"]
+        "preferred_input_keys": ["status", "highlights", "risks", "next_actions"],
+        "business_decision_markers": [
+          "under review",
+          "uncertain future",
+          "pending approval",
+          "decision",
+          "status"
+        ],
+        "dependency_markers": [
+          "dependency",
+          "dependencies",
+          "blocked",
+          "key project",
+          "upstream",
+          "critical path"
+        ]
       }
     },
     {
@@ -90,13 +107,25 @@
       "scale_max": 5,
       "guidance": {
         "0": "Next steps are missing entirely despite being present in the input.",
-        "1": "No clear actions or next steps are surfaced.",
-        "3": "Actions are present but vague, implicit, or not clearly prioritized.",
-        "5": "Next actions are explicit, clear, and directionally useful for the audience."
+        "1": "No actions or next steps are mentioned.",
+        "2": "Actions are implied but not clearly stated.",
+        "3": "General next steps are present but vague.",
+        "4": "Clear next steps are present.",
+        "5": "Clear, specific next steps are present with ownership or prioritization."
       },
       "config": {
         "actions_input_key": "next_actions",
-        "action_keywords": ["next", "action", "priority", "focus", "complete", "confirm", "finalize"]
+        "action_keywords": [
+          "next",
+          "action",
+          "priority",
+          "focus",
+          "complete",
+          "confirm",
+          "finalize",
+          "should",
+          "to be done"
+        ]
       }
     }
   ]
