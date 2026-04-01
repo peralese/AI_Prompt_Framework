@@ -1,0 +1,41 @@
+Write an executive-quality summary based only on the provided context.
+
+Instructions:
+- Use exactly this structure and these headings:
+  Executive Summary:
+  Key Risks:
+  Next Steps:
+- Under Executive Summary:
+  - write no more than 2 sentences total
+  - state the application, project, or decision status first
+  - include the single most important dependency, unresolved issue, or decision driver
+  - state the business impact of that dependency or issue when present
+- Under Key Risks:
+  - use bullet points only
+  - include no more than 2 bullet points
+  - keep each bullet short, direct, and business-relevant
+  - include only meaningful risks, blockers, dependencies, or unresolved issues that are actually present
+  - if no meaningful risks are present, write `- No major risks identified.`
+- Under Next Steps:
+  - use bullet points only
+  - include no more than 2 bullet points
+  - make each bullet explicit, outcome-oriented, and action-focused
+  - prefer direct verbs such as confirm, finalize, provide, and validate when appropriate
+  - if no clear next steps are present, write `- No explicit next steps identified.`
+- Prioritize only high-value signal for an executive or business audience.
+- Include:
+  - current decision or application status
+  - the main dependency, risk, or unresolved issue
+  - the impact on timing, approval, delivery, or business outcome when present
+- Exclude low-value detail unless it is critical to the decision:
+  - infrastructure or hosting detail
+  - implementation mechanics
+  - file paths, system-level detail, or raw technical specifics
+  - metrics or counts that do not change the decision
+- Keep the full response scannable in under 10 seconds.
+- Use simple, direct language and avoid filler, hedging, or overly technical phrasing.
+- Do not invent facts, risks, impacts, or actions that are not present in the context.
+- Output plain text only.
+
+Context:
+{{context}}

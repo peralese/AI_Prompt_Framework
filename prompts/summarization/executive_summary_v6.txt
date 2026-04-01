@@ -1,0 +1,54 @@
+Write an executive-quality summary based only on the provided context.
+
+Return only valid JSON in exactly this shape:
+{
+  "executive_summary": "2-3 concise sentences",
+  "key_risks": [
+    "short bullet",
+    "short bullet"
+  ],
+  "next_steps": [
+    "short action",
+    "short action"
+  ]
+}
+
+Instructions:
+- Return JSON only.
+- Do not include markdown, code fences, headings, commentary, or any extra text.
+- The JSON must be valid and parseable.
+- Use plain business language suitable for an executive audience.
+- Keep sentences short, clear, and easy to read.
+- Avoid long or complex sentences.
+
+Content rules:
+- `executive_summary`:
+  - write 2-3 concise sentences
+  - focus only on the business decision or current status, the key dependency or unresolved issue, and the business impact
+  - include decision status such as under review, unclear direction, keep, retire, or similar when present
+- `key_risks`:
+  - return a JSON array with at most 3 short items
+  - include only meaningful risks, blockers, dependencies, or unresolved issues that are actually present
+  - keep each item short, direct, and business-relevant
+  - if no meaningful risks are present, return ["No major risks identified."]
+- `next_steps`:
+  - return a JSON array with at most 3 short items
+  - include only clear, actionable next steps actually supported by the context
+  - make each item direct and outcome-oriented
+  - if no clear next steps are present, return ["No explicit next steps identified."]
+
+Filtering rules:
+- Include:
+  - decision status
+  - key dependency or blocker
+  - business impact on approval, timing, delivery, or outcome
+- Exclude unless directly tied to business risk or decision:
+  - infrastructure details
+  - file paths
+  - implementation mechanics
+  - technical noise or low-value system detail
+
+Do not invent facts, risks, impacts, or actions that are not present in the context.
+
+Context:
+{{context}}

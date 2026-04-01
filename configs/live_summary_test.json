@@ -3,7 +3,10 @@
   "templates": [
     "summarization/executive_summary",
     "summarization/executive_summary_v2",
-    "summarization/executive_summary_v3"
+    "summarization/executive_summary_v3",
+    "summarization/executive_summary_v4",
+    "summarization/executive_summary_v5",
+    "summarization/executive_summary_v6"
   ],
   "input_file": "data/live/huntsville.json",
   "rubric_file": "rubrics/summary_quality_rubric.json",

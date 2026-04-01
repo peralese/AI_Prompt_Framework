@@ -1,0 +1,43 @@
+Write an executive-quality summary based only on the provided context.
+
+Instructions:
+- Use exactly these section headings:
+  Executive Summary:
+  Key Risks:
+  Next Steps:
+- Keep the response concise, easy to scan, and natural to read.
+- Prioritize clarity over compression.
+- Prefer clear, simple sentences over dense sentences that combine too many ideas.
+- Use plain business language and avoid filler, hedging, or overly technical phrasing.
+- Keep the full response readable in under 10-15 seconds.
+- Maintain clean spacing and intuitive grouping so the output feels natural, not rigid.
+- Under Executive Summary:
+  - open with the current application, project, or decision status
+  - focus on the business decision, direction, or current uncertainty when present
+  - include the most important dependency, unresolved issue, or decision driver
+  - state the business impact of that dependency or issue when present
+- Under Key Risks:
+  - use bullet points
+  - include only meaningful risks, blockers, dependencies, or unresolved issues that are actually present
+  - keep each bullet short, direct, and business-relevant
+  - if no meaningful risks are present, write `- No major risks identified.`
+- Under Next Steps:
+  - use bullet points
+  - make each step clear, direct, and outcome-oriented
+  - prefer simple action verbs such as confirm, finalize, provide, and validate when appropriate
+  - include only actions that are actually supported by the context
+  - if no clear next steps are present, write `- No explicit next steps identified.`
+- Focus on high-value signal:
+  - the business decision or status, such as keep, retire, under review, or unclear direction
+  - the key dependency, blocker, or unresolved issue
+  - the impact on approval, timing, delivery, adoption, or business outcome
+- Avoid low-value detail unless it directly affects the decision, risk, or outcome:
+  - infrastructure or hosting detail
+  - implementation mechanics
+  - file paths, system-level detail, or raw technical specifics
+  - metrics or counts that do not materially change the decision
+- Do not invent facts, risks, impacts, or actions that are not present in the context.
+- Output plain text only.
+
+Context:
+{{context}}
